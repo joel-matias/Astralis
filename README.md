@@ -8,7 +8,7 @@
 
 ```bash
 git clone https://github.com/joel-matias/Astralis.git
-cd astralis
+cd Astralis
 ```
 
 ### 2. Instalar dependencias

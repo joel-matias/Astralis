@@ -64,3 +64,61 @@ Luego abre en tu navegador:
 ```text
 http://localhost:3000
 ```
+
+## Scripts de Prisma
+
+```bash
+npm run prisma:generate
+```
+
+Genera el cliente de Prisma.
+
+```bash
+npm run prisma:validate
+```
+
+Valida que el archivo `schema.prisma` no tenga errores.
+
+```bash
+npm run prisma:format
+```
+
+Ordena y formatea el archivo `schema.prisma`.
+
+```bash
+npm run prisma:push
+```
+
+Sincroniza los cambios del schema con la base de datos.
+
+```bash
+npm run prisma:migrate
+```
+
+Para crear y aplicar las migraciones.
+
+```bash
+npm run prisma:studio
+```
+
+Para ver y editar datos de manera visual
+
+## Pruebas E2E con Playwright
+
+Para ejecutar las pruebas end-to-end:
+
+```bash
+npm run test:e2e
+```
+
+Para abrir la interfaz visual de Playwright:
+
+```bash
+npm run test:e2e:ui
+```
+
+Para correr las pruebas viendo el navegador (la configure con firefox porque es el que mas utilizo pero pueden cambiarlo si quieren):
+
+```bash
+npm run test:e2e:headed
+```

@@ -1,13 +1,15 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
 export default function LoginPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const bloqueoDesdeUrl = searchParams.get('code') === 'cuenta_bloqueada'
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         // Evitamos recargar la pagina y mejor manejamos el error desd el cleinte
@@ -27,8 +29,8 @@ export default function LoginPage() {
 
         setLoading(false)
 
-        if (result?.error === 'CUENTA_BLOQUEADA') {
-            setError('Tu cuenta está bloqueada. Contacta al administrador.')
+        if (result?.code === 'cuenta_bloqueada') {
+            setError('Cuenta bloqueada temporalmente. Intenta de nuevo en 15 minutos.')
             return
         }
 
@@ -49,7 +51,11 @@ export default function LoginPage() {
                 <input name="email" type="email" placeholder="Correo electrónico" required />
                 <input name="password" type="password" placeholder="Contraseña" required />
 
-                {error && <p>{error}</p>}
+                {(error || bloqueoDesdeUrl) && (
+                    <p role="alert">
+                        {error || 'Cuenta bloqueada temporalmente. Intenta de nuevo en 15 minutos.'}
+                    </p>
+                )}
 
                 <button type="submit" disabled={loading}>
                     {loading ? 'Ingresando...' : 'Ingresar'}

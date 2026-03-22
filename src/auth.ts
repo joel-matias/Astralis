@@ -1,7 +1,12 @@
 import NextAuth from 'next-auth'
+import { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+
+class CuentaBloqueadaError extends CredentialsSignin {
+    code = 'cuenta_bloqueada'
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     session: { strategy: 'jwt' },
@@ -36,16 +41,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
                 // Para cuenta bloqueada tambien guardamos log
                 if (usuario.estado === 'BLOQUEADO') {
-                    await prisma.logAuditoria.create({
-                        data: {
-                            usuarioID: usuario.usuarioID,
-                            accion: 'LOGIN',
-                            modulo: 'auth',
-                            resultado: 'Bloqueado',
-                            detalles: 'Intento de acceso a cuenta bloqueada',
-                        },
-                    })
-                    throw new Error('CUENTA_BLOQUEADA')
+                    // Si ya pasaron los 15 minutos lo desbloqueamos
+                    if (usuario.bloqueadoHasta && usuario.bloqueadoHasta < new Date()) {
+                        await prisma.usuario.update({
+                            where: { usuarioID: usuario.usuarioID },
+                            data: { estado: 'ACTIVO', intentosFallidos: 0, bloqueadoHasta: null },
+                        })
+                    } else {
+                        await prisma.logAuditoria.create({
+                            data: {
+                                usuarioID: usuario.usuarioID,
+                                accion: 'LOGIN',
+                                modulo: 'auth',
+                                resultado: 'Bloqueado',
+                                detalles: 'Intento de acceso a cuenta bloqueada',
+                            },
+                        })
+                        throw new CuentaBloqueadaError()
+                    }
                 }
 
                 const passwordOk = await bcrypt.compare(
@@ -62,6 +75,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                         data: {
                             intentosFallidos: nuevoIntentos,
                             estado: bloquear ? 'BLOQUEADO' : 'ACTIVO',
+                            bloqueadoHasta: bloquear
+                                ? new Date(Date.now() + 15 * 60 * 1000)
+                                : null,
                         },
                     })
 
@@ -76,11 +92,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                         },
                     })
 
-                    if (bloquear) throw new Error('CUENTA_BLOQUEADA')
+                    if (bloquear) throw new CuentaBloqueadaError()
                     return null
                 }
 
-                // Si el login es exitoso tambien gardamos el login
+                // Si el login es exitoso tambien gardamos el log
                 await prisma.usuario.update({
                     where: { usuarioID: usuario.usuarioID },
                     data: { intentosFallidos: 0 },

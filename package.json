@@ -14,6 +14,7 @@
     "prisma:validate": "prisma validate",
     "prisma:format": "prisma format",
     "prisma:push": "prisma db push",
+    "prisma:reset": "prisma migrate reset",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },

@@ -47,6 +47,7 @@ model Usuario {
   email            String        @unique @db.VarChar(150)
   contrasenaHash   String        @db.VarChar(255)
   intentosFallidos Int           @default(0) @db.TinyInt
+  bloqueadoHasta   DateTime?
   estado           EstadoUsuario @default(ACTIVO)
   rolID            String        @db.VarChar(36)
   creadoEn         DateTime      @default(now())

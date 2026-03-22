@@ -1,124 +1,134 @@
 # Astralis
 
+## Setup rapido para probar
 
-
-## Como arrancar el proyecto
-
-### 1. Clonar el repositorio
+### 1. Clonar e instalar
 
 ```bash
 git clone https://github.com/joel-matias/Astralis.git
 cd Astralis
-```
-
-### 2. Instalar dependencias
-
-```bash
 npm install
 ```
 
-### 3. Configurar las variables de entorno
-
-Copia el archivo de ejemplo:
+### 2. Variables de entorno
 
 ```bash
 cp .env.example .env
 ```
 
-Despues, abre el archivo `.env` y configura tu conexion a MySQL:
+Configura en `.env`:
 
 ```env
 DATABASE_URL="mysql://USER:PASSWORD@localhost:3306/DB_NAME"
+AUTH_SECRET="pega_aqui_tu_secret"
 ```
 
-Ejemplo:
+Puedes generar `AUTH_SECRET` con:
 
-```env
-DATABASE_URL="mysql://root:root@localhost:3306/astralis"
+```bash
+npx auth secret
 ```
 
-### 4. Asegurarte de tener MySQL corriendo
+### 3. Preparar base de datos
 
-Antes de levantar la app, verifica que tu servidor MySQL este encendido y que la base de datos exista.
-
-Si todavia no creaste la base de datos, puedes hacerlo con:
+Verifica que MySQL este corriendo y crea la base si aun no existe:
 
 ```sql
 CREATE DATABASE astralis;
 ```
 
-### 5. Generar el cliente de Prisma
-
-```bash
-npx prisma generate
-```
-
-### 6. Arrancar la aplicacion en desarrollo
-
-```bash
-npm run dev
-```
-
-Luego abre en tu navegador:
-
-```text
-http://localhost:3000
-```
-
-## Scripts de Prisma
-
-```bash
-npm run prisma:generate
-```
-
-Genera el cliente de Prisma.
-
-```bash
-npm run prisma:validate
-```
-
-Valida que el archivo `schema.prisma` no tenga errores.
-
-```bash
-npm run prisma:format
-```
-
-Ordena y formatea el archivo `schema.prisma`.
-
-```bash
-npm run prisma:push
-```
-
-Sincroniza los cambios del schema con la base de datos.
+Aplica migraciones:
 
 ```bash
 npm run prisma:migrate
 ```
 
-Para crear y aplicar las migraciones.
+Si quieres reiniciar todo desde cero:
+
+```bash
+npm run prisma:reset
+```
+
+### 4. Cargar datos de prueba
+
+```bash
+npm run prisma:seed
+```
+
+Credenciales de prueba iniciales:
+
+- Email: `admin@astralis.mx`
+- Password: `admin1234`
+
+### 5. Ejecutar la app
+
+```bash
+npm run dev
+```
+
+Abrir:
+
+```text
+http://localhost:3000
+```
+
+## Scripts utiles
+
+### Prisma
+
+```bash
+npm run prisma:generate
+```
+Genera Prisma Client.
+
+```bash
+npm run prisma:validate
+```
+Valida el `schema.prisma`.
+
+```bash
+npm run prisma:format
+```
+Formatea el schema.
+
+```bash
+npm run prisma:push
+```
+Sincroniza schema sin migraciones.
+
+```bash
+npm run prisma:migrate
+```
+Crea/aplica migraciones en desarrollo.
+
+```bash
+npm run prisma:reset
+```
+Elimina y recrea la base aplicando migraciones y seed.
+
+```bash
+npm run prisma:seed
+```
+Ejecuta semillas desde `prisma/seeds/seed.ts`.
 
 ```bash
 npm run prisma:studio
 ```
+Abre Prisma Studio.
 
-Para ver y editar datos de manera visual
-
-## Pruebas E2E con Playwright
-
-Para ejecutar las pruebas end-to-end:
+### Playwright
 
 ```bash
 npm run test:e2e
 ```
-
-Para abrir la interfaz visual de Playwright:
+Corre pruebas e2e.
 
 ```bash
 npm run test:e2e:ui
 ```
-
-Para correr las pruebas viendo el navegador (la configure con firefox porque es el que mas utilizo pero pueden cambiarlo si quieren):
+Abre UI de Playwright.
 
 ```bash
 npm run test:e2e:headed
 ```
+Corre pruebas con navegador visible.

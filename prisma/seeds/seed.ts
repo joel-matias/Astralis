@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+// Solo son datos de pruebas para comenzar, luego agreagmos mas
+
 async function main() {
     // ── ROL ──────────────────────────────────────────────────────────────────
     const rol = await prisma.rol.upsert({

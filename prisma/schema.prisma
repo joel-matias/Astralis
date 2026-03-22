@@ -19,12 +19,12 @@ datasource db {
 // =============================================================================
 
 model Rol {
-  rolID    String @id @default(uuid()) @db.VarChar(36)
-  nombre   String @unique @db.VarChar(50)
+  rolID  String @id @default(uuid()) @db.VarChar(36)
+  nombre String @unique @db.VarChar(50)
 
   // Relaciones
-  usuarios  Usuario[]
-  permisos  Permiso[]
+  usuarios Usuario[]
+  permisos Permiso[]
 
   @@map("roles")
 }
@@ -33,7 +33,7 @@ model Permiso {
   permisoID String @id @default(uuid()) @db.VarChar(36)
   rolID     String @db.VarChar(36)
   accion    String @db.VarChar(100) // ej. "ruta:crear", "boleto:vender"
-  modulo    String @db.VarChar(50)  // ej. "rutas", "ventas"
+  modulo    String @db.VarChar(50) // ej. "rutas", "ventas"
 
   rol Rol @relation(fields: [rolID], references: [rolID])
 
@@ -42,34 +42,34 @@ model Permiso {
 }
 
 model Usuario {
-  usuarioID       String       @id @default(uuid()) @db.VarChar(36)
-  nombreCompleto  String       @db.VarChar(100)
-  email           String       @unique @db.VarChar(150)
-  contrasenaHash  String       @db.VarChar(255)
-  intentosFallidos Int         @default(0) @db.TinyInt
-  estado          EstadoUsuario @default(ACTIVO)
-  rolID           String       @db.VarChar(36)
-  creadoEn        DateTime     @default(now())
-  actualizadoEn   DateTime     @updatedAt
+  usuarioID        String        @id @default(uuid()) @db.VarChar(36)
+  nombreCompleto   String        @db.VarChar(100)
+  email            String        @unique @db.VarChar(150)
+  contrasenaHash   String        @db.VarChar(255)
+  intentosFallidos Int           @default(0) @db.TinyInt
+  estado           EstadoUsuario @default(ACTIVO)
+  rolID            String        @db.VarChar(36)
+  creadoEn         DateTime      @default(now())
+  actualizadoEn    DateTime      @updatedAt
 
   // Relaciones
-  rol             Rol           @relation(fields: [rolID], references: [rolID])
-  sesiones        SesionActiva[]
-  logsAuditoria   LogAuditoria[]
-  rutasCreadas    Ruta[]
+  rol                 Rol            @relation(fields: [rolID], references: [rolID])
+  sesiones            SesionActiva[]
+  logsAuditoria       LogAuditoria[]
+  rutasCreadas        Ruta[]
   horariosProgramados Horario[]
 
   @@map("usuarios")
 }
 
 model SesionActiva {
-  sesionID       String   @id @default(uuid()) @db.VarChar(36)
-  usuarioID      String   @db.VarChar(36)
-  tokenAcceso    String   @unique @db.VarChar(512)
-  fechaInicio    DateTime @default(now())
+  sesionID        String   @id @default(uuid()) @db.VarChar(36)
+  usuarioID       String   @db.VarChar(36)
+  tokenAcceso     String   @unique @db.VarChar(512)
+  fechaInicio     DateTime @default(now())
   fechaExpiracion DateTime
-  ipOrigen       String   @db.VarChar(45) // IPv4 o IPv6
-  activa         Boolean  @default(true)
+  ipOrigen        String   @db.VarChar(45) // IPv4 o IPv6
+  activa          Boolean  @default(true)
 
   usuario Usuario @relation(fields: [usuarioID], references: [usuarioID])
 
@@ -79,14 +79,14 @@ model SesionActiva {
 }
 
 model LogAuditoria {
-  logID      String   @id @default(uuid()) @db.VarChar(36)
-  usuarioID  String?  @db.VarChar(36)  // Nullable: intentos de usuario no existente
-  accion     String   @db.VarChar(100)
-  modulo     String   @db.VarChar(50)
-  resultado  String   @db.VarChar(20)  // "Exito" | "Fallo" | "Bloqueado"
-  detalles   String?  @db.Text
-  ipOrigen   String?  @db.VarChar(45)
-  fechaHora  DateTime @default(now())
+  logID     String   @id @default(uuid()) @db.VarChar(36)
+  usuarioID String?  @db.VarChar(36) // Nullable: intentos de usuario no existente
+  accion    String   @db.VarChar(100)
+  modulo    String   @db.VarChar(50)
+  resultado String   @db.VarChar(20) // "Exito" | "Fallo" | "Bloqueado"
+  detalles  String?  @db.Text
+  ipOrigen  String?  @db.VarChar(45)
+  fechaHora DateTime @default(now())
 
   usuario Usuario? @relation(fields: [usuarioID], references: [usuarioID])
 
@@ -102,26 +102,26 @@ model LogAuditoria {
 // =============================================================================
 
 model Ruta {
-  rutaID          String     @id @default(uuid()) @db.VarChar(36)
-  codigoRuta      String     @unique @db.VarChar(20)  // Código autogenerado, ej. RUT-001
-  nombreRuta      String     @db.VarChar(150)
-  ciudadOrigen    String     @db.VarChar(100)
-  ciudadDestino   String     @db.VarChar(100)
-  terminalOrigen  String     @db.VarChar(150)
-  terminalDestino String     @db.VarChar(150)
-  distanciaKm     Decimal    @db.Decimal(8, 2)
-  tiempoEstimadoHrs Decimal  @db.Decimal(5, 2)
-  tipoRuta        TipoRuta   @default(DIRECTA)
-  tarifaBase      Decimal    @db.Decimal(10, 2)
-  estado          EstadoRuta @default(INACTIVA)
-  creadoPorID     String     @db.VarChar(36)
-  creadoEn        DateTime   @default(now())
-  actualizadoEn   DateTime   @updatedAt
+  rutaID            String     @id @default(uuid()) @db.VarChar(36)
+  codigoRuta        String     @unique @db.VarChar(20) // Código autogenerado, ej. RUT-001
+  nombreRuta        String     @db.VarChar(150)
+  ciudadOrigen      String     @db.VarChar(100)
+  ciudadDestino     String     @db.VarChar(100)
+  terminalOrigen    String     @db.VarChar(150)
+  terminalDestino   String     @db.VarChar(150)
+  distanciaKm       Decimal    @db.Decimal(8, 2)
+  tiempoEstimadoHrs Decimal    @db.Decimal(5, 2)
+  tipoRuta          TipoRuta   @default(DIRECTA)
+  tarifaBase        Decimal    @db.Decimal(10, 2)
+  estado            EstadoRuta @default(INACTIVA)
+  creadoPorID       String     @db.VarChar(36)
+  creadoEn          DateTime   @default(now())
+  actualizadoEn     DateTime   @updatedAt
 
   // Relaciones
-  creadoPor    Usuario          @relation(fields: [creadoPorID], references: [usuarioID])
-  paradas      ParadaIntermedia[]
-  horarios     Horario[]
+  creadoPor Usuario            @relation(fields: [creadoPorID], references: [usuarioID])
+  paradas   ParadaIntermedia[]
+  horarios  Horario[]
 
   @@index([ciudadOrigen, ciudadDestino])
   @@index([estado])
@@ -129,14 +129,14 @@ model Ruta {
 }
 
 model ParadaIntermedia {
-  paradaID          String  @id @default(uuid()) @db.VarChar(36)
-  rutaID            String  @db.VarChar(36)
-  nombreParada      String  @db.VarChar(150)
-  ciudad            String  @db.VarChar(100)
-  ordenEnRuta       Int     @db.TinyInt           // Orden geográfico desde origen
+  paradaID               String  @id @default(uuid()) @db.VarChar(36)
+  rutaID                 String  @db.VarChar(36)
+  nombreParada           String  @db.VarChar(150)
+  ciudad                 String  @db.VarChar(100)
+  ordenEnRuta            Int     @db.TinyInt // Orden geográfico desde origen
   distanciaDesdeOrigenKm Decimal @db.Decimal(8, 2)
-  tiempoEsperaMin   Int     @default(0) @db.SmallInt
-  tarifaDesdeOrigen Decimal @db.Decimal(10, 2)
+  tiempoEsperaMin        Int     @default(0) @db.SmallInt
+  tarifaDesdeOrigen      Decimal @db.Decimal(10, 2)
 
   ruta Ruta @relation(fields: [rutaID], references: [rutaID], onDelete: Cascade)
 
@@ -151,28 +151,30 @@ model ParadaIntermedia {
 // =============================================================================
 
 model Horario {
-  horarioID    String         @id @default(uuid()) @db.VarChar(36)
-  rutaID       String         @db.VarChar(36)
-  autobusID    String         @db.VarChar(36)
-  conductorID  String         @db.VarChar(36)
-  programadoPorID String      @db.VarChar(36)
-  fechaInicio  DateTime       // Fecha de inicio de vigencia
-  horaSalida   DateTime       @db.Time // Solo hora
-  frecuencia   FrecuenciaHorario
-  vigencia     VigenciaHorario  @default(INDEFINIDA)
-  fechaFin     DateTime?       // Solo aplica si vigencia = DEFINIDA
-  precioBase   Decimal         @db.Decimal(10, 2)
-  estado       EstadoHorario   @default(ACTIVO)
-  creadoEn     DateTime        @default(now())
-  actualizadoEn DateTime       @updatedAt
+  horarioID       String            @id @default(uuid()) @db.VarChar(36)
+  rutaID          String            @db.VarChar(36)
+  autobusID       String            @db.VarChar(36)
+  conductorID     String            @db.VarChar(36)
+  programadoPorID String            @db.VarChar(36)
+  fechaInicio     DateTime // Fecha de inicio de vigencia
+  horaSalida      DateTime          @db.Time // Solo hora
+  frecuencia      FrecuenciaHorario
+  vigencia        VigenciaHorario   @default(INDEFINIDA)
+  fechaFin        DateTime? // Solo aplica si vigencia = DEFINIDA
+  precioBase      Decimal           @db.Decimal(10, 2)
+  estado          EstadoHorario     @default(ACTIVO)
+  creadoEn        DateTime          @default(now())
+  actualizadoEn   DateTime          @updatedAt
 
   // Relaciones
-  ruta         Ruta        @relation(fields: [rutaID], references: [rutaID])
-  autobus      Autobus     @relation(fields: [autobusID], references: [autobusID])
-  conductor    Conductor   @relation(fields: [conductorID], references: [conductorID])
-  programadoPor Usuario    @relation(fields: [programadoPorID], references: [usuarioID])
-  boletos      Boleto[]
-  asignacionesAnden AsignacionAnden[]
+  ruta                     Ruta                      @relation(fields: [rutaID], references: [rutaID])
+  autobus                  Autobus                   @relation(fields: [autobusID], references: [autobusID])
+  conductor                Conductor                 @relation(fields: [conductorID], references: [conductorID])
+  programadoPor            Usuario                   @relation(fields: [programadoPorID], references: [usuarioID])
+  boletos                  Boleto[]
+  asignacionesAnden        AsignacionAnden[]
+  asignacionAutobusViaje   AsignacionAutobusViaje?
+  asignacionConductorViaje AsignacionConductorViaje?
 
   @@index([rutaID])
   @@index([autobusID, fechaInicio])
@@ -186,31 +188,31 @@ model Horario {
 // =============================================================================
 
 model Cliente {
-  clienteID  String   @id @default(uuid()) @db.VarChar(36)
-  nombre     String   @db.VarChar(100)
-  email      String?  @db.VarChar(150)
-  edad       Int?     @db.TinyInt
-  documento  String?  @db.VarChar(30)   // INE, pasaporte, etc.
+  clienteID String   @id @default(uuid()) @db.VarChar(36)
+  nombre    String   @db.VarChar(100)
+  email     String?  @db.VarChar(150)
+  edad      Int?     @db.TinyInt
+  documento String?  @db.VarChar(30) // INE, pasaporte, etc.
   creadoEn  DateTime @default(now())
 
-  boletos   Boleto[]
+  boletos Boleto[]
 
   @@map("clientes")
 }
 
 model Venta {
-  ventaID        String      @id @default(uuid()) @db.VarChar(36)
-  vendedorID     String      @db.VarChar(36)      // FK -> Usuario (VendedorTaquilla)
-  metodoPago     MetodoPago
-  montoTotal     Decimal     @db.Decimal(10, 2)
-  cambioEntregado Decimal?   @db.Decimal(10, 2)
-  idTransaccion  String?     @db.VarChar(100)     // ID del TPV si aplica
-  estado         EstadoVenta @default(COMPLETADA)
-  fechaHora      DateTime    @default(now())
+  ventaID         String      @id @default(uuid()) @db.VarChar(36)
+  vendedorID      String      @db.VarChar(36) // FK -> Usuario (VendedorTaquilla)
+  metodoPago      MetodoPago
+  montoTotal      Decimal     @db.Decimal(10, 2)
+  cambioEntregado Decimal?    @db.Decimal(10, 2)
+  idTransaccion   String?     @db.VarChar(100) // ID del TPV si aplica
+  estado          EstadoVenta @default(COMPLETADA)
+  fechaHora       DateTime    @default(now())
 
   // Relaciones
-  boletos              Boleto[]
-  comprobanteFiscal    ComprobanteFiscal?
+  boletos           Boleto[]
+  comprobanteFiscal ComprobanteFiscal?
 
   @@index([vendedorID])
   @@index([fechaHora])
@@ -218,22 +220,22 @@ model Venta {
 }
 
 model Boleto {
-  boletoID    String       @id @default(uuid()) @db.VarChar(36)
-  horarioID   String       @db.VarChar(36)
-  clienteID   String       @db.VarChar(36)
-  ventaID     String?      @db.VarChar(36)   // Null si aún no se vende
-  asientoID   String       @db.VarChar(36)
-  precio      Decimal      @db.Decimal(10, 2)
-  codigoQR    String       @unique @db.VarChar(255)
-  estado      EstadoBoleto @default(DISPONIBLE)
-  fechaVenta  DateTime?
-  creadoEn    DateTime     @default(now())
+  boletoID   String       @id @default(uuid()) @db.VarChar(36)
+  horarioID  String       @db.VarChar(36)
+  clienteID  String       @db.VarChar(36)
+  ventaID    String?      @db.VarChar(36) // Null si aún no se vende
+  asientoID  String       @db.VarChar(36)
+  precio     Decimal      @db.Decimal(10, 2)
+  codigoQR   String       @unique @db.VarChar(255)
+  estado     EstadoBoleto @default(DISPONIBLE)
+  fechaVenta DateTime?
+  creadoEn   DateTime     @default(now())
 
   // Relaciones
-  horario  Horario  @relation(fields: [horarioID], references: [horarioID])
-  cliente  Cliente  @relation(fields: [clienteID], references: [clienteID])
-  venta    Venta?   @relation(fields: [ventaID], references: [ventaID])
-  asiento  Asiento  @relation(fields: [asientoID], references: [asientoID])
+  horario  Horario    @relation(fields: [horarioID], references: [horarioID])
+  cliente  Cliente    @relation(fields: [clienteID], references: [clienteID])
+  venta    Venta?     @relation(fields: [ventaID], references: [ventaID])
+  asiento  Asiento    @relation(fields: [asientoID], references: [asientoID])
   equipaje Equipaje[]
 
   @@index([horarioID, estado])
@@ -242,10 +244,10 @@ model Boleto {
 }
 
 model Asiento {
-  asientoID      String   @id @default(uuid()) @db.VarChar(36)
-  autobusID      String   @db.VarChar(36)
-  numero         String   @db.VarChar(5)   // ej. "A01", "15B"
-  disponible     Boolean  @default(true)
+  asientoID      String    @id @default(uuid()) @db.VarChar(36)
+  autobusID      String    @db.VarChar(36)
+  numero         String    @db.VarChar(5) // ej. "A01", "15B"
+  disponible     Boolean   @default(true)
   reservadoHasta DateTime?
 
   autobus Autobus  @relation(fields: [autobusID], references: [autobusID])
@@ -275,41 +277,41 @@ model ComprobanteFiscal {
 // =============================================================================
 
 model Autobus {
-  autobusID        String         @id @default(uuid()) @db.VarChar(36)
-  numeroEconomico  String         @unique @db.VarChar(20)
-  placas           String         @unique @db.VarChar(10)
-  vin              String         @unique @db.VarChar(17)
-  marca            String         @db.VarChar(50)
-  modelo           String         @db.VarChar(50)
-  anio             Int            @db.SmallInt
-  capacidadAsientos Int           @db.TinyInt
-  tipoServicio     TipoServicio
-  estadoOperativo  EstadoAutobus  @default(DISPONIBLE)
-  fechaRegistro    DateTime       @default(now())
+  autobusID           String        @id @default(uuid()) @db.VarChar(36)
+  numeroEconomico     String        @unique @db.VarChar(20)
+  placas              String        @unique @db.VarChar(10)
+  vin                 String        @unique @db.VarChar(17)
+  marca               String        @db.VarChar(50)
+  modelo              String        @db.VarChar(50)
+  anio                Int           @db.SmallInt
+  capacidadAsientos   Int           @db.TinyInt
+  tipoServicio        TipoServicio
+  estadoOperativo     EstadoAutobus @default(DISPONIBLE)
+  fechaRegistro       DateTime      @default(now())
   ultimoMantenimiento DateTime?
 
   // Relaciones
-  asientos        Asiento[]
-  mantenimientos  Mantenimiento[]
-  horarios        Horario[]
-  asignaciones    AsignacionAutobusViaje[]
+  asientos       Asiento[]
+  mantenimientos Mantenimiento[]
+  horarios       Horario[]
+  asignaciones   AsignacionAutobusViaje[]
 
   @@index([estadoOperativo])
   @@map("autobuses")
 }
 
 model Mantenimiento {
-  mantenimientoID    String            @id @default(uuid()) @db.VarChar(36)
-  autobusID          String            @db.VarChar(36)
-  tipo               TipoMantenimiento
-  fechaInicio        DateTime
-  fechaFin           DateTime?
-  kilometraje        Decimal?          @db.Decimal(10, 2)
-  descripcionActividad String          @db.Text
-  responsable        String            @db.VarChar(100)
-  refaccionesInsumos String?           @db.Text
-  observaciones      String?           @db.Text
-  estaAbierto        Boolean           @default(true)
+  mantenimientoID      String            @id @default(uuid()) @db.VarChar(36)
+  autobusID            String            @db.VarChar(36)
+  tipo                 TipoMantenimiento
+  fechaInicio          DateTime
+  fechaFin             DateTime?
+  kilometraje          Decimal?          @db.Decimal(10, 2)
+  descripcionActividad String            @db.Text
+  responsable          String            @db.VarChar(100)
+  refaccionesInsumos   String?           @db.Text
+  observaciones        String?           @db.Text
+  estaAbierto          Boolean           @default(true)
 
   autobus Autobus @relation(fields: [autobusID], references: [autobusID])
 
@@ -318,20 +320,20 @@ model Mantenimiento {
 }
 
 model AsignacionAutobusViaje {
-  asignacionID     String   @id @default(uuid()) @db.VarChar(36)
-  autobusID        String   @db.VarChar(36)
-  horarioID        String   @db.VarChar(36)
-  conductorID      String   @db.VarChar(36)
-  fechaAsignacion  DateTime @default(now())
-  observaciones    String?  @db.Text
-  liberado         Boolean  @default(false)
-  fechaLiberacion  DateTime?
+  asignacionID    String    @id @default(uuid()) @db.VarChar(36)
+  autobusID       String    @db.VarChar(36)
+  horarioID       String    @db.VarChar(36)
+  conductorID     String    @db.VarChar(36)
+  fechaAsignacion DateTime  @default(now())
+  observaciones   String?   @db.Text
+  liberado        Boolean   @default(false)
+  fechaLiberacion DateTime?
 
   autobus   Autobus   @relation(fields: [autobusID], references: [autobusID])
   horario   Horario   @relation(fields: [horarioID], references: [horarioID])
   conductor Conductor @relation(fields: [conductorID], references: [conductorID])
 
-  @@unique([horarioID])  // Un horario = un autobús asignado
+  @@unique([horarioID]) // Un horario = un autobús asignado
   @@index([autobusID])
   @@index([conductorID])
   @@map("asignaciones_autobus_viaje")
@@ -343,23 +345,23 @@ model AsignacionAutobusViaje {
 // =============================================================================
 
 model Conductor {
-  conductorID     String          @id @default(uuid()) @db.VarChar(36)
-  nombreCompleto  String          @db.VarChar(100)
-  curp            String          @unique @db.VarChar(18)
-  numeroLicencia  String          @unique @db.VarChar(20)
+  conductorID      String          @id @default(uuid()) @db.VarChar(36)
+  nombreCompleto   String          @db.VarChar(100)
+  curp             String          @unique @db.VarChar(18)
+  numeroLicencia   String          @unique @db.VarChar(20)
   vigenciaLicencia DateTime
-  domicilio       String?         @db.VarChar(255)
-  numeroTelefonico String?        @db.VarChar(15)
-  horasAcumuladas Decimal         @default(0) @db.Decimal(7, 2)
-  disponible      Boolean         @default(true)
-  estado          EstadoConductor @default(ACTIVO)
-  motivoBaja      String?         @db.Text         // Solo si estado = INACTIVO
-  fechaRegistro   DateTime        @default(now())
-  actualizadoEn   DateTime        @updatedAt
+  domicilio        String?         @db.VarChar(255)
+  numeroTelefonico String?         @db.VarChar(15)
+  horasAcumuladas  Decimal         @default(0) @db.Decimal(7, 2)
+  disponible       Boolean         @default(true)
+  estado           EstadoConductor @default(ACTIVO)
+  motivoBaja       String?         @db.Text // Solo si estado = INACTIVO
+  fechaRegistro    DateTime        @default(now())
+  actualizadoEn    DateTime        @updatedAt
 
   // Relaciones
-  horarios        Horario[]
-  asignaciones    AsignacionConductorViaje[]
+  horarios            Horario[]
+  asignaciones        AsignacionConductorViaje[]
   asignacionesAutobus AsignacionAutobusViaje[]
 
   @@index([estado, disponible])
@@ -367,17 +369,18 @@ model Conductor {
 }
 
 model AsignacionConductorViaje {
-  asignacionID    String   @id @default(uuid()) @db.VarChar(36)
-  conductorID     String   @db.VarChar(36)
-  horarioID       String   @db.VarChar(36)
-  fechaAsignacion DateTime @default(now())
-  observaciones   String?  @db.Text
-  liberado        Boolean  @default(false)
+  asignacionID    String    @id @default(uuid()) @db.VarChar(36)
+  conductorID     String    @db.VarChar(36)
+  horarioID       String    @db.VarChar(36)
+  fechaAsignacion DateTime  @default(now())
+  observaciones   String?   @db.Text
+  liberado        Boolean   @default(false)
   fechaLiberacion DateTime?
 
   conductor Conductor @relation(fields: [conductorID], references: [conductorID])
+  horario   Horario   @relation(fields: [horarioID], references: [horarioID])
 
-  @@unique([horarioID])  // Un horario = un conductor asignado
+  @@unique([horarioID]) // Un horario = un conductor asignado
   @@index([conductorID])
   @@map("asignaciones_conductor_viaje")
 }
@@ -388,11 +391,11 @@ model AsignacionConductorViaje {
 // =============================================================================
 
 model Anden {
-  andenID            String      @id @default(uuid()) @db.VarChar(36)
-  numero             Int
-  capacidad          Int         @db.TinyInt
-  estado             EstadoAnden @default(DISPONIBLE)
-  horarioDisponible  String?     @db.VarChar(100) // ej. "06:00-22:00"
+  andenID           String      @id @default(uuid()) @db.VarChar(36)
+  numero            Int
+  capacidad         Int         @db.TinyInt
+  estado            EstadoAnden @default(DISPONIBLE)
+  horarioDisponible String?     @db.VarChar(100) // ej. "06:00-22:00"
 
   asignaciones AsignacionAnden[]
 
@@ -400,16 +403,16 @@ model Anden {
 }
 
 model AsignacionAnden {
-  asignacionID String         @id @default(uuid()) @db.VarChar(36)
-  andenID      String         @db.VarChar(36)
-  horarioID    String         @db.VarChar(36)
-  supervisorID String         @db.VarChar(36)  // FK -> Usuario
-  fechaHora    DateTime       @default(now())
+  asignacionID String           @id @default(uuid()) @db.VarChar(36)
+  andenID      String           @db.VarChar(36)
+  horarioID    String           @db.VarChar(36)
+  supervisorID String           @db.VarChar(36) // FK -> Usuario
+  fechaHora    DateTime         @default(now())
   estado       EstadoAsignacion @default(RESERVADO)
-  cancelada    Boolean        @default(false)
+  cancelada    Boolean          @default(false)
 
-  anden    Anden   @relation(fields: [andenID], references: [andenID])
-  horario  Horario @relation(fields: [horarioID], references: [horarioID])
+  anden   Anden   @relation(fields: [andenID], references: [andenID])
+  horario Horario @relation(fields: [horarioID], references: [horarioID])
 
   @@index([andenID, estado])
   @@map("asignaciones_anden")
@@ -421,14 +424,14 @@ model AsignacionAnden {
 // =============================================================================
 
 model Equipaje {
-  equipajeID       String          @id @default(uuid()) @db.VarChar(36)
-  boletoID         String          @db.VarChar(36)
-  cantidadPiezas   Int             @db.TinyInt
-  tipoEquipaje     String          @db.VarChar(50)   // "maleta", "caja", "bicicleta"
-  pesoAproximadoKg Decimal         @db.Decimal(5, 2)
-  observaciones    String?         @db.Text
-  estado           EstadoEquipaje  @default(REGISTRADO)
-  registradoEn     DateTime        @default(now())
+  equipajeID       String         @id @default(uuid()) @db.VarChar(36)
+  boletoID         String         @db.VarChar(36)
+  cantidadPiezas   Int            @db.TinyInt
+  tipoEquipaje     String         @db.VarChar(50) // "maleta", "caja", "bicicleta"
+  pesoAproximadoKg Decimal        @db.Decimal(5, 2)
+  observaciones    String?        @db.Text
+  estado           EstadoEquipaje @default(REGISTRADO)
+  registradoEn     DateTime       @default(now())
 
   boleto Boleto @relation(fields: [boletoID], references: [boletoID])
 

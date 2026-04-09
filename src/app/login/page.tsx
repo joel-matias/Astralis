@@ -12,7 +12,6 @@ export default function LoginPage() {
     const bloqueoDesdeUrl = searchParams.get('code') === 'cuenta_bloqueada'
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-        // Evitamos recargar la pagina y mejor manejamos el error desd el cleinte
         e.preventDefault()
         setError('')
         setLoading(true)
@@ -35,7 +34,6 @@ export default function LoginPage() {
         }
 
         if (result?.error) {
-            // Aqui mostramos un error simple, por ahora luego los cambiamos
             setError('Correo o contraseña incorrectos.')
             return
         }
@@ -44,23 +42,147 @@ export default function LoginPage() {
     }
 
     return (
-        <main>
-            <form onSubmit={handleSubmit}>
-                <h1>ASTRALIS — Iniciar sesión</h1>
+        <div className="bg-surface text-on-surface min-h-screen flex flex-col">
 
-                <input name="email" type="email" placeholder="Correo electrónico" required />
-                <input name="password" type="password" placeholder="Contraseña" required />
+            {/* Barra de navegación */}
+            <nav className="bg-white/90 backdrop-blur-xl sticky top-0 z-50 border-b border-outline-variant/30 shadow-sm">
+                <div className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+                    <span className="text-2xl font-extrabold tracking-tighter text-primary font-headline">
+                        Astralis
+                    </span>
+                    <span className="hidden md:block text-sm font-medium text-on-surface-variant">
+                        Portal de Acceso
+                    </span>
+                </div>
+            </nav>
 
-                {(error || bloqueoDesdeUrl) && (
-                    <p role="alert">
-                        {error || 'Cuenta bloqueada temporalmente. Intenta de nuevo en 15 minutos.'}
+            {/* Contenido principal */}
+            <main className="grow flex items-center justify-center px-4 py-12 relative overflow-hidden">
+
+                {/* Elementos decorativos de fondo */}
+                <div className="absolute inset-0 z-0 pointer-events-none opacity-50">
+                    <div className="absolute -top-[10%] -left-[5%] w-sm h-sm rounded-full bg-surface-container-high blur-3xl" />
+                    <div className="absolute -bottom-[10%] -right-[5%] w-lg h-lg rounded-full bg-primary-fixed blur-3xl opacity-30" />
+                </div>
+
+                <div className="w-full max-w-md z-10">
+
+                    {/* Encabezado con marca */}
+                    <div className="text-center mb-10">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-6 text-on-primary shadow-xl">
+                            <span className="material-symbols-outlined text-[2rem]">
+                                directions_bus
+                            </span>
+                        </div>
+                        <h1 className="text-3xl font-extrabold tracking-tighter text-on-surface mb-2 font-headline">
+                            Astralis
+                        </h1>
+                        <p className="text-secondary text-sm font-medium">
+                            Ingresa tus credenciales para acceder al sistema.
+                        </p>
+                    </div>
+
+                    {/* Tarjeta de inicio de sesión */}
+                    <div className="bg-surface-container-lowest rounded-2xl p-10 shadow-[0_40px_100px_rgba(20,27,44,0.08)]">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+
+                            {/* Campo de correo */}
+                            <div className="space-y-2">
+                                <label
+                                    htmlFor="email"
+                                    className="block text-xs font-semibold tracking-widest uppercase text-on-surface-variant"
+                                >
+                                    Correo electrónico
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        placeholder="correo@astralis.mx"
+                                        required
+                                        className="w-full px-5 py-4 pr-12 bg-surface-container-high rounded-full border-0 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all text-on-surface placeholder:text-outline/50 text-sm"
+                                    />
+                                    <span className="material-symbols-outlined text-xl absolute right-4 top-1/2 -translate-y-1/2 text-outline/40 select-none">
+                                        mail
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Campo de contraseña */}
+                            <div className="space-y-2">
+                                <label
+                                    htmlFor="password"
+                                    className="block text-xs font-semibold tracking-widest uppercase text-on-surface-variant"
+                                >
+                                    Contraseña
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        required
+                                        className="w-full px-5 py-4 pr-12 bg-surface-container-high rounded-full border-0 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all text-on-surface placeholder:text-outline/50 text-sm"
+                                    />
+                                    <span className="material-symbols-outlined text-xl absolute right-4 top-1/2 -translate-y-1/2 text-outline/40 select-none">
+                                        lock
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Mensaje de error */}
+                            {(error || bloqueoDesdeUrl) && (
+                                <div
+                                    role="alert"
+                                    className="flex items-start gap-2 px-4 py-3 bg-error-container rounded-xl text-on-error-container text-sm"
+                                >
+                                    <span className="material-symbols-outlined text-lg shrink-0 mt-px select-none">
+                                        error
+                                    </span>
+                                    <span>
+                                        {error || 'Cuenta bloqueada temporalmente. Intenta de nuevo en 15 minutos.'}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Botón de ingreso */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full py-4 bg-linear-to-r from-primary to-primary-container text-on-primary font-bold rounded-full text-sm tracking-wide shadow-lg shadow-primary/20 hover:-translate-y-px active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+                            </button>
+                        </form>
+
+                        {/* Pie de tarjeta */}
+                        <div className="mt-8 pt-6 border-t border-surface-container-high flex justify-center">
+                            <p className="text-xs text-secondary/60 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-base select-none">
+                                    verified_user
+                                </span>
+                                Acceso seguro con cifrado empresarial
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+            {/* Pie de página */}
+            <footer className="w-full py-8 px-8 border-t border-outline-variant/20 bg-surface-container-low">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+                    <span className="font-headline font-bold text-on-surface text-sm">
+                        Astralis — Sistema de Gestión de Transporte
+                    </span>
+                    <p className="text-xs tracking-wide uppercase text-on-surface-variant/50">
+                        © 2024 Astralis. Todos los derechos reservados.
                     </p>
-                )}
+                </div>
+            </footer>
 
-                <button type="submit" disabled={loading}>
-                    {loading ? 'Ingresando...' : 'Ingresar'}
-                </button>
-            </form>
-        </main>
+        </div>
     )
 }

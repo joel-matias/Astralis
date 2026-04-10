@@ -12,6 +12,7 @@ function rutaSegunRol(role: string | undefined): string {
     }
 }
 
+// Por el momento agrege la redirecion aqui por si creamos una pagina publica despues
 export default async function Home() {
     const session = await auth()
     redirect(rutaSegunRol((session?.user as { role?: string } | null)?.role))

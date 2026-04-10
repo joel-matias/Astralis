@@ -393,7 +393,7 @@ model AsignacionConductorViaje {
 
 model Anden {
   andenID           String      @id @default(uuid()) @db.VarChar(36)
-  numero            Int
+  numero            Int         @unique
   capacidad         Int         @db.TinyInt
   estado            EstadoAnden @default(DISPONIBLE)
   horarioDisponible String?     @db.VarChar(100) // ej. "06:00-22:00"

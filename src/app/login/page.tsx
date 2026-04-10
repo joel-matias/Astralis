@@ -1,8 +1,19 @@
 'use client'
 
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+
+function rutaSegunRol(role: string | undefined): string {
+    switch (role) {
+        case 'ADMIN':              return '/admin/dashboard'
+        case 'GERENTE':            return '/operaciones/dashboard'
+        case 'VENDEDOR_TAQUILLA':  return '/pos'
+        case 'SUPERVISOR_ANDENES': return '/andenes'
+        case 'ENCARGADO_EQUIPAJE': return '/equipaje'
+        default:                   return '/'
+    }
+}
 
 export default function LoginPage() {
     const router = useRouter()
@@ -38,13 +49,14 @@ export default function LoginPage() {
             return
         }
 
-        router.push('/')
+        const session = await getSession()
+        const role = (session?.user as { role?: string } | null)?.role
+        router.push(rutaSegunRol(role))
     }
 
     return (
         <div className="bg-surface text-on-surface min-h-screen flex flex-col">
 
-            {/* Barra de navegación */}
             <nav className="bg-white/90 backdrop-blur-xl sticky top-0 z-50 border-b border-outline-variant/30 shadow-sm">
                 <div className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
                     <span className="text-2xl font-extrabold tracking-tighter text-primary font-headline">
@@ -56,10 +68,8 @@ export default function LoginPage() {
                 </div>
             </nav>
 
-            {/* Contenido principal */}
             <main className="grow flex items-center justify-center px-4 py-12 relative overflow-hidden">
 
-                {/* Elementos decorativos de fondo */}
                 <div className="absolute inset-0 z-0 pointer-events-none opacity-50">
                     <div className="absolute -top-[10%] -left-[5%] w-sm h-sm rounded-full bg-surface-container-high blur-3xl" />
                     <div className="absolute -bottom-[10%] -right-[5%] w-lg h-lg rounded-full bg-primary-fixed blur-3xl opacity-30" />
@@ -67,7 +77,6 @@ export default function LoginPage() {
 
                 <div className="w-full max-w-md z-10">
 
-                    {/* Encabezado con marca */}
                     <div className="text-center mb-10">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-6 text-on-primary shadow-xl">
                             <span className="material-symbols-outlined text-[2rem]">
@@ -82,11 +91,9 @@ export default function LoginPage() {
                         </p>
                     </div>
 
-                    {/* Tarjeta de inicio de sesión */}
                     <div className="bg-surface-container-lowest rounded-2xl p-10 shadow-[0_40px_100px_rgba(20,27,44,0.08)]">
                         <form onSubmit={handleSubmit} className="space-y-6">
 
-                            {/* Campo de correo */}
                             <div className="space-y-2">
                                 <label
                                     htmlFor="email"
@@ -109,7 +116,6 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            {/* Campo de contraseña */}
                             <div className="space-y-2">
                                 <label
                                     htmlFor="password"
@@ -132,10 +138,10 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            {/* Mensaje de error */}
                             {(error || bloqueoDesdeUrl) && (
                                 <div
                                     role="alert"
+                                    data-testid="login-error"
                                     className="flex items-start gap-2 px-4 py-3 bg-error-container rounded-xl text-on-error-container text-sm"
                                 >
                                     <span className="material-symbols-outlined text-lg shrink-0 mt-px select-none">
@@ -147,7 +153,6 @@ export default function LoginPage() {
                                 </div>
                             )}
 
-                            {/* Botón de ingreso */}
                             <button
                                 type="submit"
                                 disabled={loading}
@@ -157,7 +162,6 @@ export default function LoginPage() {
                             </button>
                         </form>
 
-                        {/* Pie de tarjeta */}
                         <div className="mt-8 pt-6 border-t border-surface-container-high flex justify-center">
                             <p className="text-xs text-secondary/60 flex items-center gap-1.5">
                                 <span className="material-symbols-outlined text-base select-none">
@@ -171,7 +175,6 @@ export default function LoginPage() {
                 </div>
             </main>
 
-            {/* Pie de página */}
             <footer className="w-full py-8 px-8 border-t border-outline-variant/20 bg-surface-container-low">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
                     <span className="font-headline font-bold text-on-surface text-sm">

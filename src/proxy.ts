@@ -1,26 +1,44 @@
 import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 
-// Es lo mismo que teniamos en el middleware solo lo cambie por el nuevo
-// estandar de Next 16 
-export const proxy = auth((req) => {
-    const isLoggedIn = !!req.auth
-    const isAuthRoute = req.nextUrl.pathname.startsWith('/login')
+const RUTAS_PROTEGIDAS: Record<string, string[]> = {
+    '/admin':       ['ADMIN'],
+    '/operaciones': ['ADMIN', 'GERENTE'],
+    '/pos':         ['ADMIN', 'VENDEDOR_TAQUILLA'],
+    '/andenes':     ['ADMIN', 'SUPERVISOR_ANDENES'],
+    '/equipaje':    ['ADMIN', 'ENCARGADO_EQUIPAJE'],
+}
 
-    // Si ya se autentico no puede volver al login, lo redirigimos a la pagina home
-    if (isAuthRoute && isLoggedIn) {
-        return NextResponse.redirect(new URL('/', req.url))
+export const proxy = auth((req) => {
+    const { nextUrl } = req
+    const pathname = nextUrl.pathname
+    const isLoggedIn = !!req.auth
+
+    if (pathname.startsWith('/login')) {
+        if (isLoggedIn) {
+            return NextResponse.redirect(new URL('/', nextUrl.origin))
+        }
+        return NextResponse.next()
     }
 
-    // Si va a una ruta protegida cuando no este auteticado, lo redirigimos a la pagina d login
-    if (!isAuthRoute && !isLoggedIn) {
-        return NextResponse.redirect(new URL('/login', req.url))
+    if (!isLoggedIn) {
+        return NextResponse.redirect(new URL('/login', nextUrl.origin))
+    }
+
+    const role = (req.auth?.user as { role?: string } | undefined)?.role ?? ''
+
+    for (const [prefijo, rolesPermitidos] of Object.entries(RUTAS_PROTEGIDAS)) {
+        if (pathname.startsWith(prefijo)) {
+            if (!rolesPermitidos.includes(role)) {
+                return NextResponse.redirect(new URL('/', nextUrl.origin))
+            }
+            break
+        }
     }
 
     return NextResponse.next()
 })
 
 export const config = {
-    /// Protege todo excepto archivos estáticos y API de auth
     matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico).*)'],
 }

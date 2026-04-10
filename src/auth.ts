@@ -18,15 +18,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 password: { label: 'Contraseña', type: 'password' },
             },
 
-            async authorize(credentials) {
+            async authorize(credentials, request) {
                 if (!credentials?.email || !credentials?.password) return null
+
+                const ip =
+                    request?.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+                    request?.headers.get('x-real-ip') ??
+                    '0.0.0.0'
 
                 const usuario = await prisma.usuario.findUnique({
                     where: { email: credentials.email as string },
                     include: { rol: true },
                 })
 
-                // Registramos el intento del usuario de acceder en el log
                 if (!usuario) {
                     await prisma.logAuditoria.create({
                         data: {
@@ -34,31 +38,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                             modulo: 'auth',
                             resultado: 'Fallo',
                             detalles: `Email no registrado: ${credentials.email}`,
+                            ipOrigen: ip,
                         },
                     })
                     return null
-                }
-
-                // Para cuenta bloqueada tambien guardamos log
-                if (usuario.estado === 'BLOQUEADO') {
-                    // Si ya pasaron los 15 minutos lo desbloqueamos
-                    if (usuario.bloqueadoHasta && usuario.bloqueadoHasta < new Date()) {
-                        await prisma.usuario.update({
-                            where: { usuarioID: usuario.usuarioID },
-                            data: { estado: 'ACTIVO', intentosFallidos: 0, bloqueadoHasta: null },
-                        })
-                    } else {
-                        await prisma.logAuditoria.create({
-                            data: {
-                                usuarioID: usuario.usuarioID,
-                                accion: 'LOGIN',
-                                modulo: 'auth',
-                                resultado: 'Bloqueado',
-                                detalles: 'Intento de acceso a cuenta bloqueada',
-                            },
-                        })
-                        throw new CuentaBloqueadaError()
-                    }
                 }
 
                 const passwordOk = await bcrypt.compare(
@@ -81,7 +64,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                         },
                     })
 
-                    // Si alcanzo el maximo de intentos tambien se guarda el log
                     await prisma.logAuditoria.create({
                         data: {
                             usuarioID: usuario.usuarioID,
@@ -89,14 +71,62 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                             modulo: 'auth',
                             resultado: bloquear ? 'Bloqueado' : 'Fallo',
                             detalles: `Intento ${nuevoIntentos}/3 fallido`,
+                            ipOrigen: ip,
                         },
                     })
 
-                    if (bloquear) throw new CuentaBloqueadaError()
+                    if (bloquear) {
+                        await prisma.logAuditoria.create({
+                            data: {
+                                usuarioID: usuario.usuarioID,
+                                accion: 'BLOQUEO_CUENTA',
+                                modulo: 'auth',
+                                resultado: 'Bloqueado',
+                                detalles: `Cuenta bloqueada automáticamente tras 3 intentos fallidos. Requiere atención del administrador.`,
+                                ipOrigen: ip,
+                            },
+                        })
+                        throw new CuentaBloqueadaError()
+                    }
+
                     return null
                 }
 
-                // Si el login es exitoso tambien gardamos el log
+                if (usuario.estado === 'BLOQUEADO') {
+                    if (usuario.bloqueadoHasta && usuario.bloqueadoHasta < new Date()) {
+                        await prisma.usuario.update({
+                            where: { usuarioID: usuario.usuarioID },
+                            data: { estado: 'ACTIVO', intentosFallidos: 0, bloqueadoHasta: null },
+                        })
+                    } else {
+                        await prisma.logAuditoria.create({
+                            data: {
+                                usuarioID: usuario.usuarioID,
+                                accion: 'LOGIN',
+                                modulo: 'auth',
+                                resultado: 'Bloqueado',
+                                detalles: 'Intento de acceso a cuenta bloqueada',
+                                ipOrigen: ip,
+                            },
+                        })
+                        throw new CuentaBloqueadaError()
+                    }
+                }
+
+                const sesionID = crypto.randomUUID()
+                const fechaExpiracion = new Date(Date.now() + 8 * 60 * 60 * 1000)
+
+                await prisma.sesionActiva.create({
+                    data: {
+                        sesionID,
+                        usuarioID: usuario.usuarioID,
+                        tokenAcceso: sesionID, // UUID como referencia; el JWT real viaja en cookie
+                        fechaExpiracion,
+                        ipOrigen: ip,
+                        activa: true,
+                    },
+                })
+
                 await prisma.usuario.update({
                     where: { usuarioID: usuario.usuarioID },
                     data: { intentosFallidos: 0 },
@@ -108,6 +138,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                         accion: 'LOGIN',
                         modulo: 'auth',
                         resultado: 'Exito',
+                        detalles: 'Inicio de sesión exitoso',
+                        ipOrigen: ip,
                     },
                 })
 
@@ -116,24 +148,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     name: usuario.nombreCompleto,
                     email: usuario.email,
                     role: usuario.rol.nombre,
+                    sesionID,
                 }
             },
         }),
     ],
 
     callbacks: {
-        // Pasa el rol al token JWT
         async jwt({ token, user }) {
-            if (user) token.role = (user as any).role
+            if (user) {
+                token.role = (user as { role: string }).role
+                token.sesionID = (user as { sesionID: string }).sesionID
+            }
             return token
         },
-        // Expone el rol en la sesión del cliente
+
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.sub as string
-                    ; (session.user as any).role = token.role
+                    ; (session.user as unknown as Record<string, unknown>).role = token.role
+                    ; (session.user as unknown as Record<string, unknown>).sesionID = token.sesionID
             }
             return session
+        },
+    },
+
+    events: {
+        async signOut(message) {
+            const token = 'token' in message ? message.token : null
+            const sesionID = token?.sesionID as string | undefined
+            if (sesionID) {
+                await prisma.sesionActiva.updateMany({
+                    where: { sesionID, activa: true },
+                    data: { activa: false },
+                }).catch(() => { /* sesión ya expirada */ })
+            }
         },
     },
 

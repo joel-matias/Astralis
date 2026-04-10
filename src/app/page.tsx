@@ -1,9 +1,18 @@
-import Image from "next/image";
+import { redirect } from 'next/navigation'
+import { auth } from '@/auth'
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      Pagina de Inicio
-    </div>
-  );
+function rutaSegunRol(role: string | undefined): string {
+    switch (role) {
+        case 'ADMIN': return '/admin/dashboard'
+        case 'GERENTE': return '/operaciones/dashboard'
+        case 'VENDEDOR_TAQUILLA': return '/pos'
+        case 'SUPERVISOR_ANDENES': return '/andenes'
+        case 'ENCARGADO_EQUIPAJE': return '/equipaje'
+        default: return '/login'
+    }
+}
+
+export default async function Home() {
+    const session = await auth()
+    redirect(rutaSegunRol((session?.user as { role?: string } | null)?.role))
 }

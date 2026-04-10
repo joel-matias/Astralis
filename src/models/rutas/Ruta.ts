@@ -1,6 +1,7 @@
 import { TipoRuta, EstadoRuta } from '@prisma/client'
 import { ParadaIntermedia } from './ParadaIntermedia'
 import { RutaDTO } from './RutaDTO'
+import { Horario } from '../horarios/Horario'
 
 export class Ruta {
     private rutaID: string
@@ -16,6 +17,7 @@ export class Ruta {
     private estado: EstadoRuta
     private fechaCreacion: Date
     private paradas: ParadaIntermedia[]
+    private horarios: Horario[]
 
     constructor(
         rutaID: string,
@@ -30,7 +32,8 @@ export class Ruta {
         tarifaBase: number,
         estado: EstadoRuta,
         fechaCreacion: Date = new Date(),
-        paradas: ParadaIntermedia[] = []
+        paradas: ParadaIntermedia[] = [],
+        horarios: Horario[] = []
     ) {
         this.rutaID = rutaID
         this.codigoRuta = codigoRuta
@@ -45,6 +48,7 @@ export class Ruta {
         this.estado = estado
         this.fechaCreacion = fechaCreacion
         this.paradas = paradas
+        this.horarios = horarios
     }
 
     getRutaID(): string { return this.rutaID }
@@ -62,8 +66,8 @@ export class Ruta {
 
     crearDatosRuta(datos: RutaDTO): boolean {
         return (
-            datos.origen.trim().length > 0 &&
-            datos.destino.trim().length > 0 &&
+            datos.ciudadOrigen.trim().length > 0 &&
+            datos.ciudadDestino.trim().length > 0 &&
             datos.distanciaKm > 0 &&
             datos.tarifaBase > 0
         )
@@ -108,6 +112,10 @@ export class Ruta {
 
     getParadas(): ParadaIntermedia[] {
         return [...this.paradas]
+    }
+
+    getHorarios(): Horario[] {
+        return [...this.horarios]
     }
 
     estaActiva(): boolean {

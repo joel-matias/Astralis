@@ -3,10 +3,10 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { TipoRuta } from '@prisma/client'
-import type { RutaFormData, ParadaFormData } from '../actions'
+import type { RutaDTO, ParadaDTO } from '@/models/rutas/RutaDTO'
 import { CityInput } from './CityInput'
 
-interface ParadaItem extends ParadaFormData {
+interface ParadaItem extends ParadaDTO {
     key: string
 }
 
@@ -20,7 +20,7 @@ const PARADA_VACIA = {
 
 interface Props {
     modo: 'crear' | 'editar'
-    action: (data: RutaFormData) => Promise<{ error: string } | { warning: string } | void>
+    action: (data: RutaDTO) => Promise<{ error: string } | { warning: string } | void>
     defaultValues?: Partial<{
         codigoRuta: string
         tipoRuta: TipoRuta
@@ -32,7 +32,7 @@ interface Props {
         distanciaKm: number
         tiempoEstimadoHrs: number
     }>
-    defaultParadas?: ParadaFormData[]
+    defaultParadas?: ParadaDTO[]
 }
 
 export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = [] }: Props) {
@@ -40,7 +40,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
     const [isPending, startTransition] = useTransition()
     const [error, setError] = useState<string | null>(null)
     const [warning, setWarning] = useState<string | null>(null)
-    const lastDataRef = useRef<RutaFormData | null>(null)
+    const lastDataRef = useRef<RutaDTO | null>(null)
 
     const [tipoRuta, setTipoRuta] = useState<TipoRuta>(
         defaultValues.tipoRuta ?? TipoRuta.DIRECTA
@@ -89,7 +89,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
         const form = e.currentTarget
         const get = (name: string) => (form.elements.namedItem(name) as HTMLInputElement)?.value ?? ''
 
-        const data: RutaFormData = {
+        const data: RutaDTO = {
             codigoRuta: get('codigoRuta'),
             tipoRuta,
             tarifaBase: parseFloat(get('tarifaBase')) || 0,

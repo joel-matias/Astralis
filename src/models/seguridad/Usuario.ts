@@ -1,5 +1,7 @@
-import { EstadoUsuario } from '@prisma/client'
+import { EstadoUsuario, EstadoRuta, TipoRuta } from '@prisma/client'
 import { Rol } from './Rol'
+import { Ruta } from '../rutas/Ruta'
+import type { RutaDTO } from '../rutas/RutaDTO'
 
 export class Usuario {
     private usuarioID: string
@@ -74,6 +76,23 @@ export class Usuario {
         if (this.intentosFallidos >= Usuario.INTENTOS_MAX) {
             this.bloquearCuenta()
         }
+    }
+
+    crearRuta(datos: RutaDTO): Ruta {
+        return new Ruta(
+            '',
+            datos.codigoRuta,
+            datos.ciudadOrigen,
+            datos.ciudadDestino,
+            datos.terminalOrigen,
+            datos.terminalDestino,
+            datos.distanciaKm,
+            datos.tiempoEstimadoHrs,
+            datos.tipoRuta as TipoRuta,
+            datos.tarifaBase,
+            EstadoRuta.INACTIVA,
+            new Date()
+        )
     }
 
     esBloqueado(): boolean {

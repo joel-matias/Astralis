@@ -1,18 +1,21 @@
 export interface ParadaDTO {
     nombreParada: string
     ciudad: string
-    ordenEnRuta: number
+    distanciaDesdeOrigenKm: number
     tiempoEsperaMin: number
     tarifaDesdeOrigen: number
 }
 
 export interface RutaDTO {
-    origen: string
-    destino: string
+    codigoRuta: string
+    ciudadOrigen: string
+    ciudadDestino: string
     terminalOrigen: string
     terminalDestino: string
     distanciaKm: number
-    tipoRuta: string          // 'Directa' | 'ConParadas'
+    tiempoEstimadoHrs: number
+    tipoRuta: string
     tarifaBase: number
     paradas: ParadaDTO[]
+    omitirDuplicado?: boolean
 }

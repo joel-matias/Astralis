@@ -1,17 +1,3 @@
-/**
- * CU8 — Gestión de Equipaje
- * Clase: Equipaje
- *
- * Responsabilidades (diagrama):
- * - Almacenar datos del equipaje del pasajero
- * - Asociarse a un único pasajero y viaje
- * - Validar que los datos estén completos
- * - Permitir su cancelación antes de guardar
- *
- * Pertenece a: Pasajero (0..*)
- * Genera: LogAuditoria (1)
- */
-
 export class Equipaje {
     private equipajeID: string
     private cantidadPiezas: number
@@ -36,7 +22,6 @@ export class Equipaje {
         this.observaciones = observaciones
     }
 
-    // ── Getters ──────────────────────────────────────────────────────────────
     getEquipajeID(): string { return this.equipajeID }
     getCantidadPiezas(): number { return this.cantidadPiezas }
     getNombre(): string { return this.nombre }
@@ -44,28 +29,14 @@ export class Equipaje {
     getPesoAproximado(): number { return this.pesoAproximado }
     getObservaciones(): string { return this.observaciones }
 
-    // ── Métodos del diagrama ─────────────────────────────────────────────────
-
-    /**
-     * Persiste el registro de equipaje en la base de datos.
-     * Diagrama: + guardar() : void
-     */
     guardar(): void {
         // RepositorioEquipaje.persistirEquipaje(this)
     }
 
-    /**
-     * Cancela el registro de equipaje antes de ser persistido.
-     * Diagrama: + cancelar() : void
-     */
     cancelar(): void {
         // LogAuditoria.registrarCancelacion(this.equipajeID)
     }
 
-    /**
-     * Valida que los datos del equipaje sean completos y coherentes.
-     * Diagrama: + validarDatos() : Boolean
-     */
     validarDatos(): boolean {
         return (
             this.cantidadPiezas > 0 &&

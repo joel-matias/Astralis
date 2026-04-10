@@ -1,19 +1,3 @@
-/**
- * CU5 — Gestión de Flota
- * Clase: Autobus
- *
- * Responsabilidades (diagrama M7CU):
- * - Almacenar datos técnicos y operativos del autobús
- * - Controlar estado de disponibilidad
- * - Validar unicidad de placas y número económico
- * - Permitir cambio de estado operativo
- * - Verificar compatibilidad con viajes
- * - Gestionar tipo de autobús
- *
- * Colabora con: Mantenimiento, AsignacionAutobusViaje, Viaje, Conductor
- * También referenciado en: CU3 (Horarios), CU7 (Andenes)
- */
-
 import { TipoServicio, EstadoAutobus } from '@prisma/client'
 
 export class Autobus {
@@ -55,7 +39,6 @@ export class Autobus {
         this.fechaRegistro = fechaRegistro
     }
 
-    // ── Getters ──────────────────────────────────────────────────────────────
     getAutobusID(): string { return this.autobusID }
     getNumEconomico(): string { return this.numEconomico }
     getPlacas(): string { return this.placas }
@@ -68,12 +51,6 @@ export class Autobus {
     getEstado(): EstadoAutobus { return this.estado }
     getFechaRegistro(): Date { return this.fechaRegistro }
 
-    // ── Métodos del diagrama ─────────────────────────────────────────────────
-
-    /**
-     * Registra los datos del autobús desde el formulario de alta.
-     * Diagrama M7CU: + registraDatos(datos: Map) : Boolean
-     */
     registraDatos(datos: Map<string, unknown>): boolean {
         return (
             datos.has('numEconomico') &&
@@ -83,10 +60,6 @@ export class Autobus {
         )
     }
 
-    /**
-     * Actualiza los datos técnicos del autobús.
-     * Diagrama M7CU: + actualizarDatos(nuevosDatos: Map) : Boolean
-     */
     actualizarDatos(nuevosDatos: Map<string, unknown>): boolean {
         if (nuevosDatos.has('marca')) this.marca = nuevosDatos.get('marca') as string
         if (nuevosDatos.has('modelo')) this.modelo = nuevosDatos.get('modelo') as string
@@ -94,56 +67,32 @@ export class Autobus {
         return true
     }
 
-    /**
-     * Cambia el estado operativo del autobús validando la transición permitida.
-     * Diagrama M7CU: + cambiarEstado(nuevoEstado: EstadoAutobus) : Boolean
-     * Regla: Asignado NO puede pasar directamente a EnMantenimiento o FueraDeServicio.
-     */
+    // Regla: Asignado NO puede pasar directamente a EnMantenimiento o FueraDeServicio; debe finalizar el viaje primero
     cambiarEstado(nuevoEstado: EstadoAutobus): boolean {
         if (this.estado === EstadoAutobus.ASIGNADO &&
             (nuevoEstado === EstadoAutobus.EN_MANTENIMIENTO || nuevoEstado === EstadoAutobus.FUERA_DE_SERVICIO)) {
-            return false  // Debe finalizar el viaje primero
+            return false
         }
         this.estado = nuevoEstado
         return true
     }
 
-    /**
-     * Verifica si el autobús está disponible para ser asignado.
-     * Diagrama M7CU: + verificarDisponibilidad() : Boolean
-     */
     verificarDisponibilidad(): boolean {
         return this.estado === EstadoAutobus.DISPONIBLE
     }
 
-    /**
-     * Establece el estado a DISPONIBLE (tras finalizar viaje o mantenimiento).
-     * Diagrama M7CU: + establecerDisponible() : void
-     */
     establecerDisponible(): void {
         this.estado = EstadoAutobus.DISPONIBLE
     }
 
-    /**
-     * Registra la baja del autobús del inventario activo.
-     * Diagrama M7CU: + registrarBajaInterior() : void
-     */
     registrarBajaInterior(): void {
         this.estado = EstadoAutobus.FUERA_DE_SERVICIO
     }
 
-    /**
-     * Retorna true si el autobús está disponible para asignación.
-     * Diagrama CU3/CU7: + estaDisponible() : Boolean
-     */
     estaDisponible(): boolean {
         return this.estado === EstadoAutobus.DISPONIBLE
     }
 
-    /**
-     * Retorna la información del autobús como string legible.
-     * Diagrama CU7: + obtenerInfo() : String
-     */
     obtenerInfo(): string {
         return `${this.marca} ${this.modelo} (${this.anio}) — Placas: ${this.placas} — Cap: ${this.capacidad}`
     }

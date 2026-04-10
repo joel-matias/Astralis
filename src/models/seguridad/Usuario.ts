@@ -1,17 +1,3 @@
-/**
- * CU1 — Seguridad y Autenticación
- * Clase: Usuario
- *
- * Responsabilidades (diagrama):
- * - Autenticarse con email y contraseña válidos
- * - Bloquear cuenta tras 3 intentos fallidos
- * - Conocer su rol para acceder a funciones
- * - Generar sesión activa al autenticarse
- * - Registrar cada intento en el log
- *
- * Colabora con: Rol, SesionActiva, LogAuditoria
- */
-
 import { EstadoUsuario } from '@prisma/client'
 import { Rol } from './Rol'
 
@@ -51,7 +37,6 @@ export class Usuario {
         this.rol = rol
     }
 
-    // ── Getters ──────────────────────────────────────────────────────────────
     getUsuarioID(): string { return this.usuarioID }
     getNombreCompleto(): string { return this.nombreCompleto }
     getEmail(): string { return this.email }
@@ -62,23 +47,11 @@ export class Usuario {
     getRolID(): string { return this.rolID }
     getRol(): Rol | null { return this.rol }
 
-    // ── Métodos del diagrama ─────────────────────────────────────────────────
-
-    /**
-     * Inicia sesión verificando que la cuenta no esté bloqueada y las
-     * credenciales sean válidas.
-     * Diagrama: + iniciarSesion(email: String, pass: String) : Boolean
-     * Nota: la comparación real del hash se realiza en AutenticacionService.
-     */
     iniciarSesion(email: string, pass: string): boolean {
         if (this.esBloqueado()) return false
         return this.validarCredenciales(email, pass)
     }
 
-    /**
-     * Bloquea la cuenta durante MINUTOS_BLOQUEO minutos.
-     * Diagrama: + bloquearCuenta() : void
-     */
     bloquearCuenta(): void {
         this.estado = EstadoUsuario.BLOQUEADO
         this.bloqueadoHasta = new Date(
@@ -86,28 +59,16 @@ export class Usuario {
         )
     }
 
-    /**
-     * Cierra la sesión del usuario y restablece el contador de intentos.
-     * Diagrama: + cerrarSesion() : void
-     */
     cerrarSesion(): void {
         this.intentosFallidos = 0
         // La SesionActiva correspondiente es invalidada por SesionActiva.invalidar()
     }
 
-    /**
-     * Valida que el email coincida. La verificación del hash se delega a
-     * AutenticacionService usando bcrypt.compare().
-     * Diagrama: + validarCredenciales(email: String, pass: String) : Boolean
-     */
+    // La verificación del hash se delega a AutenticacionService usando bcrypt.compare()
     validarCredenciales(email: string, pass: string): boolean {
         return this.email === email && pass.length > 0
     }
 
-    /**
-     * Incrementa el contador de intentos fallidos y bloquea si alcanza el máximo.
-     * Diagrama: + incrementarIntento() : void
-     */
     incrementarIntento(): void {
         this.intentosFallidos++
         if (this.intentosFallidos >= Usuario.INTENTOS_MAX) {
@@ -115,11 +76,6 @@ export class Usuario {
         }
     }
 
-    /**
-     * Verifica si la cuenta está actualmente bloqueada, liberándola si el
-     * tiempo de bloqueo ya expiró.
-     * Diagrama: + esBloqueado() : Boolean
-     */
     esBloqueado(): boolean {
         if (this.estado !== EstadoUsuario.BLOQUEADO) return false
 

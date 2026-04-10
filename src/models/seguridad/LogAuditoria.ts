@@ -1,18 +1,3 @@
-/**
- * CU1 — Seguridad y Autenticación
- * Clase: LogAuditoria
- *
- * Responsabilidades (diagrama):
- * - Registrar cada intento de inicio de sesión
- * - Guardar resultado (Éxito / Fallo / Bloqueado)
- * - Registrar bloqueo y notificar administrador
- * - Proveer trazabilidad de accesos para auditoría
- * - Registrar cierre de sesión del usuario
- *
- * Colabora con: Usuario, SesionActiva
- * Persiste en BD
- */
-
 export type ResultadoAuditoria = 'Exito' | 'Fallo' | 'Bloqueado'
 
 export class LogAuditoria {
@@ -42,7 +27,6 @@ export class LogAuditoria {
         this.detalles = detalles
     }
 
-    // ── Getters ──────────────────────────────────────────────────────────────
     getLogID(): string { return this.logID }
     getUsuarioID(): string | null { return this.usuarioID }
     getAccion(): string { return this.accion }
@@ -51,23 +35,9 @@ export class LogAuditoria {
     getResultado(): ResultadoAuditoria { return this.resultado }
     getDetalles(): string | null { return this.detalles }
 
-    // ── Métodos del diagrama ─────────────────────────────────────────────────
+    // La persistencia real se delega al repositorio/servicio de auditoría
+    registrar(): void {}
 
-    /**
-     * Registra la acción en el log.
-     * Diagrama: + registrar() : void
-     * La persistencia real se delega al repositorio/servicio de auditoría.
-     */
-    registrar(): void {
-        // La instancia ya contiene los datos; el repositorio persiste este objeto.
-        // Ver: AuditoriaService.registrar(log: LogAuditoria)
-    }
-
-    /**
-     * Filtra logs por fecha.
-     * Diagrama: + buscarPorFecha() : List
-     * Operación de consulta — implementada en AuditoriaService.
-     */
     static buscarPorFecha(
         logs: LogAuditoria[],
         desde: Date,
@@ -78,10 +48,6 @@ export class LogAuditoria {
         )
     }
 
-    /**
-     * Filtra logs por usuarioID.
-     * Diagrama: + buscarPorUsuario(usuarioID: String) : List
-     */
     static buscarPorUsuario(
         logs: LogAuditoria[],
         usuarioID: string
@@ -89,11 +55,6 @@ export class LogAuditoria {
         return logs.filter((l) => l.usuarioID === usuarioID)
     }
 
-    /**
-     * Exporta los logs en el formato indicado.
-     * Diagrama: + exportar(formato: String) : File
-     * La generación del archivo se delega al servicio de auditoría.
-     */
     exportar(formato: 'json' | 'csv'): string {
         const data = {
             logID: this.logID,

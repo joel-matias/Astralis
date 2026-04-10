@@ -13,6 +13,7 @@ export const proxy = auth((req) => {
     const { nextUrl } = req
     const pathname = nextUrl.pathname
     const isLoggedIn = !!req.auth
+    console.log('PROXY:', pathname, 'isLoggedIn:', isLoggedIn)
 
     if (pathname.startsWith('/login')) {
         if (isLoggedIn) {

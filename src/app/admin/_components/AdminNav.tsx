@@ -9,6 +9,7 @@ const LINKS = [
     { href: '/admin/horarios',   label: 'Programación' },
     { href: '/admin/flota',      label: 'Flota' },
     { href: '/admin/reportes',   label: 'Reportes' },
+    { href: '/admin/andenes',     label: 'Andenes' },
 ]
 
 export function AdminNav() {

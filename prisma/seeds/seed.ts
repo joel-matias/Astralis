@@ -1,4 +1,4 @@
-import { PrismaClient, TipoRuta, EstadoRuta, TipoServicio, EstadoConductor, FrecuenciaHorario, VigenciaHorario } from '@prisma/client'
+import { PrismaClient, TipoRuta, EstadoRuta, TipoServicio, EstadoConductor, FrecuenciaHorario, VigenciaHorario, EstadoAnden } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -107,6 +107,53 @@ async function main() {
             precioBase: 850,
         },
     })
+
+    // ── ANDENES ───────────────────────────────────────────────────────────────
+    const andenes = [
+        {
+            numero: 1,
+            capacidad: 3,
+            estado: EstadoAnden.DISPONIBLE,
+            horarioDisponible: '06:00-22:00',
+        },
+        {
+            numero: 2,
+            capacidad: 2,
+            estado: EstadoAnden.DISPONIBLE,
+            horarioDisponible: '06:00-22:00',
+        },
+        {
+            numero: 3,
+            capacidad: 4,
+            estado: EstadoAnden.OCUPADO,
+            horarioDisponible: '06:00-22:00',
+        },
+        {
+            numero: 4,
+            capacidad: 3,
+            estado: EstadoAnden.RESERVADO,
+            horarioDisponible: '08:00-18:00',
+        },
+        {
+            numero: 5,
+            capacidad: 2,
+            estado: EstadoAnden.DISPONIBLE,
+            horarioDisponible: '24/7',
+        },
+    ]
+
+    for (const andenData of andenes) {
+        // Verificar si ya existe
+        const existente = await prisma.anden.findUnique({
+            where: { numero: andenData.numero }
+        })
+
+        if (!existente) {
+            await prisma.anden.create({
+                data: andenData,
+            })
+        }
+    }
 
     console.log('Semilla cargada completamente')
 }

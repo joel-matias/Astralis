@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { EstadoRuta } from '@prisma/client'
 import { toggleEstadoRuta } from '../actions'
-import { PrintFAB } from './_components/PrintFAB'
+import { RutaMapWrapper } from './_components/RutaMapWrapper'
 
 interface PageProps {
     params: Promise<{ id: string }>
@@ -147,55 +147,15 @@ export default async function DetalleRutaPage({ params }: PageProps) {
                     </div>
 
                     <div className="md:col-span-2 relative h-56 rounded-xl overflow-hidden shadow-[0_0_40px_rgba(20,27,44,0.04)] bg-surface-container">
-                        <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-secondary/10" />
-
-                        <div className="absolute inset-0 flex items-center justify-center px-10">
-                            <div className="w-full flex items-start gap-2">
-
-                                <div className="flex flex-col items-center gap-1 shrink-0 min-w-20">
-                                    <div className="w-4 h-4 rounded-full bg-primary ring-4 ring-primary/20" />
-                                    <p className="text-xs font-bold text-primary text-center leading-tight mt-1">
-                                        {ruta.ciudadOrigen}
-                                    </p>
-                                    <p className="text-[10px] text-secondary text-center leading-tight">
-                                        {ruta.terminalOrigen}
-                                    </p>
-                                </div>
-
-                                <div className="flex-1 flex items-center mt-2">
-                                    <div className="flex-1 h-0.5 bg-primary/30" />
-                                    {ruta.paradas.map(p => (
-                                        <div key={p.paradaID} className="flex flex-col items-center shrink-0 mx-2">
-                                            <div className="w-3 h-3 rounded-full border-2 border-primary/50 bg-surface-container-lowest ring-2 ring-primary/10" />
-                                            <p className="text-[10px] text-secondary mt-1 max-w-14 text-center leading-tight">
-                                                {p.ciudad.split(',')[0]}
-                                            </p>
-                                        </div>
-                                    ))}
-                                    {ruta.paradas.length === 0 && (
-                                        <div className="flex-1 h-0.5 border-t border-dashed border-primary/20" />
-                                    )}
-                                    <div className="flex-1 h-0.5 bg-primary/30" />
-                                </div>
-
-                                <div className="flex flex-col items-center gap-1 shrink-0 min-w-20">
-                                    <div className="w-4 h-4 rounded-full bg-secondary ring-4 ring-secondary/20 flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-white" style={{ fontSize: '10px' }}>flag</span>
-                                    </div>
-                                    <p className="text-xs font-bold text-secondary text-center leading-tight mt-1">
-                                        {ruta.ciudadDestino}
-                                    </p>
-                                    <p className="text-[10px] text-secondary text-center leading-tight">
-                                        {ruta.terminalDestino}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="absolute bottom-3 left-4 bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                        <RutaMapWrapper
+                            origen={ruta.ciudadOrigen}
+                            destino={ruta.ciudadDestino}
+                            paradas={ruta.paradas.map(p => ({ ciudad: p.ciudad }))}
+                        />
+                        <div className="absolute bottom-3 left-4 bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1.5 rounded-lg pointer-events-none">
                             <span className="text-xs font-bold text-primary flex items-center gap-1.5">
                                 <span className="material-symbols-outlined text-sm">location_on</span>
-                                Visualización de Trayecto • {distanciaNum} km
+                                Trayecto en Mapa • {distanciaNum} km
                             </span>
                         </div>
                     </div>
@@ -305,7 +265,6 @@ export default async function DetalleRutaPage({ params }: PageProps) {
                 </div>
             </footer>
 
-            <PrintFAB />
         </div>
     )
 }

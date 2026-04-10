@@ -25,6 +25,7 @@ export interface RutaFormData {
     distanciaKm: number
     tiempoEstimadoHrs: number
     paradas: ParadaFormData[]
+    omitirDuplicado?: boolean
 }
 
 export async function toggleEstadoRuta(rutaID: string, estadoActual: EstadoRuta) {
@@ -51,7 +52,7 @@ export async function toggleEstadoRuta(rutaID: string, estadoActual: EstadoRuta)
     revalidatePath('/admin/rutas')
 }
 
-export async function crearRuta(data: RutaFormData): Promise<{ error: string } | void> {
+export async function crearRuta(data: RutaFormData): Promise<{ error: string } | { warning: string } | void> {
     const session = await auth()
     if (!session?.user?.id) return { error: 'Sesión no válida.' }
 
@@ -78,8 +79,8 @@ export async function crearRuta(data: RutaFormData): Promise<{ error: string } |
             ciudadDestino: data.ciudadDestino.trim(),
         },
     })
-    if (duplicado) {
-        return { error: `Ya existe una ruta de ${data.ciudadOrigen} a ${data.ciudadDestino} (${duplicado.codigoRuta}).` }
+    if (duplicado && !data.omitirDuplicado) {
+        return { warning: `Ya existe la ruta ${duplicado.codigoRuta} con el mismo origen y destino. ¿Deseas guardar de todas formas?` }
     }
 
     try {
@@ -127,7 +128,7 @@ export async function crearRuta(data: RutaFormData): Promise<{ error: string } |
     redirect('/admin/rutas')
 }
 
-export async function actualizarRuta(rutaID: string, data: RutaFormData): Promise<{ error: string } | void> {
+export async function actualizarRuta(rutaID: string, data: RutaFormData): Promise<{ error: string } | { warning: string } | void> {
     const session = await auth()
     if (!session?.user?.id) return { error: 'Sesión no válida.' }
 
@@ -155,8 +156,8 @@ export async function actualizarRuta(rutaID: string, data: RutaFormData): Promis
             ciudadDestino: data.ciudadDestino.trim(),
         },
     })
-    if (duplicado) {
-        return { error: `Ya existe una ruta de ${data.ciudadOrigen} a ${data.ciudadDestino} (${duplicado.codigoRuta}).` }
+    if (duplicado && !data.omitirDuplicado) {
+        return { warning: `Ya existe la ruta ${duplicado.codigoRuta} con el mismo origen y destino. ¿Deseas guardar de todas formas?` }
     }
 
     try {

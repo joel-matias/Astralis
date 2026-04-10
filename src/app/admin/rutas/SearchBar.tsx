@@ -31,7 +31,7 @@ export function SearchBar({ defaultQ, defaultEstado }: Props) {
         <div className={`grid grid-cols-1 md:grid-cols-12 gap-4 transition-opacity ${isPending ? 'opacity-60' : ''}`}>
 
             {/* Buscador */}
-            <div className="md:col-span-6 relative">
+            <div className="md:col-span-8 relative">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary select-none">
                     search
                 </span>
@@ -44,7 +44,7 @@ export function SearchBar({ defaultQ, defaultEstado }: Props) {
             </div>
 
             {/* Filtro de estado */}
-            <div className="md:col-span-3">
+            <div className="md:col-span-4">
                 <select
                     defaultValue={defaultEstado}
                     onChange={(e) => update('estado', e.target.value)}
@@ -56,13 +56,13 @@ export function SearchBar({ defaultQ, defaultEstado }: Props) {
                 </select>
             </div>
 
-            {/* Espacio reservado para filtros avanzados */}
-            <div className="md:col-span-3 flex gap-2">
+            {/* Quite el espacio que avarcaran los demas filtros si me faltaron algunos */}
+            {/* <div className="md:col-span-3 flex gap-2">
                 <div className="flex-1 bg-surface-container-low text-on-surface-variant font-medium px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm select-none">
                     <span className="material-symbols-outlined text-xl">filter_list</span>
                     Filtros Avanzados
                 </div>
-            </div>
+            </div> */}
         </div>
     )
 }

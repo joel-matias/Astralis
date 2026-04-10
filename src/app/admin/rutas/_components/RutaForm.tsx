@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { TipoRuta } from '@prisma/client'
 import type { RutaFormData, ParadaFormData } from '../actions'
+import { CityInput } from './CityInput'
 
 interface ParadaItem extends ParadaFormData {
     key: string
@@ -19,7 +20,7 @@ const PARADA_VACIA = {
 
 interface Props {
     modo: 'crear' | 'editar'
-    action: (data: RutaFormData) => Promise<{ error: string } | void>
+    action: (data: RutaFormData) => Promise<{ error: string } | { warning: string } | void>
     defaultValues?: Partial<{
         codigoRuta: string
         tipoRuta: TipoRuta
@@ -38,6 +39,8 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const [error, setError] = useState<string | null>(null)
+    const [warning, setWarning] = useState<string | null>(null)
+    const lastDataRef = useRef<RutaFormData | null>(null)
 
     const [tipoRuta, setTipoRuta] = useState<TipoRuta>(
         defaultValues.tipoRuta ?? TipoRuta.DIRECTA
@@ -101,7 +104,22 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
 
         startTransition(async () => {
             const result = await action(data)
-            if (result?.error) setError(result.error)
+            if (!result) return
+            if ('warning' in result) {
+                lastDataRef.current = data
+                setWarning(result.warning)
+            } else if ('error' in result) {
+                setError(result.error)
+            }
+        })
+    }
+
+    function confirmarDuplicado() {
+        if (!lastDataRef.current) return
+        setWarning(null)
+        startTransition(async () => {
+            const result = await action({ ...lastDataRef.current!, omitirDuplicado: true })
+            if (result && 'error' in result) setError(result.error)
         })
     }
 
@@ -123,6 +141,36 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                     >
                         <span className="material-symbols-outlined shrink-0">error</span>
                         {error}
+                    </div>
+                )}
+
+                {warning && (
+                    <div
+                        data-testid="ruta-form-warning"
+                        role="alert"
+                        className="flex items-start gap-3 px-5 py-4 bg-tertiary-container text-on-tertiary-container rounded-xl text-sm"
+                    >
+                        <span className="material-symbols-outlined shrink-0 mt-0.5">warning</span>
+                        <div className="flex-1">
+                            <p className="font-semibold mb-3">{warning}</p>
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={confirmarDuplicado}
+                                    disabled={isPending}
+                                    className="px-4 py-1.5 bg-on-tertiary-container text-tertiary-container rounded-lg text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-60"
+                                >
+                                    Guardar de todas formas
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setWarning(null)}
+                                    className="px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-tertiary-container/50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -193,7 +241,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                                         <label className="text-xs font-bold text-secondary uppercase tracking-wider">
                                             Ciudad Origen <span className="text-error">*</span>
                                         </label>
-                                        <input
+                                        <CityInput
                                             name="ciudadOrigen"
                                             defaultValue={defaultValues.ciudadOrigen}
                                             placeholder="Ciudad de México"
@@ -226,7 +274,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                                         <label className="text-xs font-bold text-secondary uppercase tracking-wider">
                                             Ciudad Destino <span className="text-error">*</span>
                                         </label>
-                                        <input
+                                        <CityInput
                                             name="ciudadDestino"
                                             defaultValue={defaultValues.ciudadDestino}
                                             placeholder="Guadalajara"
@@ -387,9 +435,9 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                                                 />
                                             </td>
                                             <td className="px-6 py-4">
-                                                <input
+                                                <CityInput
                                                     value={nuevaParada.ciudad}
-                                                    onChange={e => setNuevaParada(p => ({ ...p, ciudad: e.target.value }))}
+                                                    onChange={v => setNuevaParada(p => ({ ...p, ciudad: v }))}
                                                     placeholder="Ciudad, Estado"
                                                     className="w-full bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20"
                                                 />

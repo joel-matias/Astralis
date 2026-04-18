@@ -1,27 +1,22 @@
-export type ResultadoAuditoria = 'Exito' | 'Fallo' | 'Bloqueado'
-
 export class LogAuditoria {
     private logID: string
-    private usuarioID: string | null
+    private usuarioID: string | null // null cuando el intento fue de un usuario inexistente
     private accion: string
-    private modulo: string
     private fechaHora: Date
-    private resultado: ResultadoAuditoria
-    private detalles: string | null
+    private resultado: string
+    private detalles: string
 
     constructor(
         logID: string,
+        usuarioID: string | null,
         accion: string,
-        modulo: string,
-        resultado: ResultadoAuditoria,
-        usuarioID: string | null = null,
-        detalles: string | null = null,
-        fechaHora: Date = new Date()
+        fechaHora: Date,
+        resultado: string,
+        detalles: string
     ) {
         this.logID = logID
         this.usuarioID = usuarioID
         this.accion = accion
-        this.modulo = modulo
         this.fechaHora = fechaHora
         this.resultado = resultado
         this.detalles = detalles
@@ -30,42 +25,42 @@ export class LogAuditoria {
     getLogID(): string { return this.logID }
     getUsuarioID(): string | null { return this.usuarioID }
     getAccion(): string { return this.accion }
-    getModulo(): string { return this.modulo }
     getFechaHora(): Date { return this.fechaHora }
-    getResultado(): ResultadoAuditoria { return this.resultado }
-    getDetalles(): string | null { return this.detalles }
+    getResultado(): string { return this.resultado }
+    getDetalles(): string { return this.detalles }
 
-    // La persistencia real se delega al repositorio/servicio de auditoría
-    registrar(): void {}
+    // Actualiza accion y resultado en la instancia antes de persistir en BD
+    registrarAcceso(accion: string, resultado: string): void {
+        this.accion = accion
+        this.resultado = resultado
+    }
 
     static buscarPorFecha(
         logs: LogAuditoria[],
         desde: Date,
         hasta: Date
     ): LogAuditoria[] {
-        return logs.filter(
-            (l) => l.fechaHora >= desde && l.fechaHora <= hasta
-        )
+        return logs.filter(l => l.fechaHora >= desde && l.fechaHora <= hasta)
     }
 
-    static buscarPorUsuario(
-        logs: LogAuditoria[],
-        usuarioID: string
-    ): LogAuditoria[] {
-        return logs.filter((l) => l.usuarioID === usuarioID)
+    static buscarPorUsuario(logs: LogAuditoria[], usuarioID: string): LogAuditoria[] {
+        return logs.filter(l => l.usuarioID === usuarioID)
     }
 
-    exportar(formato: 'json' | 'csv'): string {
+    // El diagrama indica File como tipo de retorno; en Node.js se representa como string
+    // El formato esperado es 'json' o 'csv'
+    exportarLog(formato: string): string {
         const data = {
             logID: this.logID,
             usuarioID: this.usuarioID,
             accion: this.accion,
-            modulo: this.modulo,
             fechaHora: this.fechaHora.toISOString(),
             resultado: this.resultado,
             detalles: this.detalles,
         }
-        if (formato === 'json') return JSON.stringify(data, null, 2)
-        return Object.values(data).join(',')
+        if (formato === 'csv') {
+            return Object.values(data).join(',')
+        }
+        return JSON.stringify(data, null, 2)
     }
 }

@@ -1,9 +1,10 @@
 import NextAuth from 'next-auth'
 import { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { ControladorAutenticacion } from '@/services/ControladorAutenticacion'
 
+// E4: error personalizado que NextAuth expone al cliente como code='cuenta_bloqueada'
 class CuentaBloqueadaError extends CredentialsSignin {
     code = 'cuenta_bloqueada'
 }
@@ -18,6 +19,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 password: { label: 'Contraseña', type: 'password' },
             },
 
+            // Paso 2 del diagrama: autenticar(usuario, contraseña)
+            // PantallaLogin → ControladorAutenticacion
             async authorize(credentials, request) {
                 if (!credentials?.email || !credentials?.password) return null
 
@@ -26,129 +29,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     request?.headers.get('x-real-ip') ??
                     '0.0.0.0'
 
-                const usuario = await prisma.usuario.findUnique({
-                    where: { email: credentials.email as string },
-                    include: { rol: true },
-                })
-
-                if (!usuario) {
-                    await prisma.logAuditoria.create({
-                        data: {
-                            accion: 'LOGIN',
-                            modulo: 'auth',
-                            resultado: 'Fallo',
-                            detalles: `Email no registrado: ${credentials.email}`,
-                            ipOrigen: ip,
-                        },
-                    })
-                    return null
-                }
-
-                const passwordOk = await bcrypt.compare(
+                const controlador = new ControladorAutenticacion()
+                const resultado = await controlador.autenticar(
+                    credentials.email as string,
                     credentials.password as string,
-                    usuario.contrasenaHash
+                    ip
                 )
 
-                if (!passwordOk) {
-                    const nuevoIntentos = usuario.intentosFallidos + 1
-                    const bloquear = nuevoIntentos >= 3
-
-                    await prisma.usuario.update({
-                        where: { usuarioID: usuario.usuarioID },
-                        data: {
-                            intentosFallidos: nuevoIntentos,
-                            estado: bloquear ? 'BLOQUEADO' : 'ACTIVO',
-                            bloqueadoHasta: bloquear
-                                ? new Date(Date.now() + 15 * 60 * 1000)
-                                : null,
-                        },
-                    })
-
-                    await prisma.logAuditoria.create({
-                        data: {
-                            usuarioID: usuario.usuarioID,
-                            accion: 'LOGIN',
-                            modulo: 'auth',
-                            resultado: bloquear ? 'Bloqueado' : 'Fallo',
-                            detalles: `Intento ${nuevoIntentos}/3 fallido`,
-                            ipOrigen: ip,
-                        },
-                    })
-
-                    if (bloquear) {
-                        await prisma.logAuditoria.create({
-                            data: {
-                                usuarioID: usuario.usuarioID,
-                                accion: 'BLOQUEO_CUENTA',
-                                modulo: 'auth',
-                                resultado: 'Bloqueado',
-                                detalles: `Cuenta bloqueada automáticamente tras 3 intentos fallidos. Requiere atención del administrador.`,
-                                ipOrigen: ip,
-                            },
-                        })
-                        throw new CuentaBloqueadaError()
-                    }
-
+                // Paso 10: retornarResultado(token, rol) → PantallaLogin
+                if (!resultado.exito) {
+                    if (resultado.motivo === 'cuenta_bloqueada') throw new CuentaBloqueadaError()
                     return null
                 }
 
-                if (usuario.estado === 'BLOQUEADO') {
-                    if (usuario.bloqueadoHasta && usuario.bloqueadoHasta < new Date()) {
-                        await prisma.usuario.update({
-                            where: { usuarioID: usuario.usuarioID },
-                            data: { estado: 'ACTIVO', intentosFallidos: 0, bloqueadoHasta: null },
-                        })
-                    } else {
-                        await prisma.logAuditoria.create({
-                            data: {
-                                usuarioID: usuario.usuarioID,
-                                accion: 'LOGIN',
-                                modulo: 'auth',
-                                resultado: 'Bloqueado',
-                                detalles: 'Intento de acceso a cuenta bloqueada',
-                                ipOrigen: ip,
-                            },
-                        })
-                        throw new CuentaBloqueadaError()
-                    }
-                }
-
-                const sesionID = crypto.randomUUID()
-                const fechaExpiracion = new Date(Date.now() + 8 * 60 * 60 * 1000)
-
-                await prisma.sesionActiva.create({
-                    data: {
-                        sesionID,
-                        usuarioID: usuario.usuarioID,
-                        tokenAcceso: sesionID, // UUID como referencia; el JWT real viaja en cookie
-                        fechaExpiracion,
-                        ipOrigen: ip,
-                        activa: true,
-                    },
-                })
-
-                await prisma.usuario.update({
-                    where: { usuarioID: usuario.usuarioID },
-                    data: { intentosFallidos: 0 },
-                })
-
-                await prisma.logAuditoria.create({
-                    data: {
-                        usuarioID: usuario.usuarioID,
-                        accion: 'LOGIN',
-                        modulo: 'auth',
-                        resultado: 'Exito',
-                        detalles: 'Inicio de sesión exitoso',
-                        ipOrigen: ip,
-                    },
-                })
-
+                // Paso 11: [autenticacionExitosa] → NextAuth construye el JWT y redirige al Dashboard
                 return {
-                    id: usuario.usuarioID,
-                    name: usuario.nombreCompleto,
-                    email: usuario.email,
-                    role: usuario.rol.nombre,
-                    sesionID,
+                    id: resultado.usuarioID,
+                    name: resultado.nombreCompleto,
+                    email: resultado.email,
+                    role: resultado.rol,
+                    sesionID: resultado.sesionID,
                 }
             },
         }),
@@ -173,6 +73,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
     },
 
+    // Paso 12: cerrarSesion → invalida la SesionActiva en BD
     events: {
         async signOut(message) {
             const token = 'token' in message ? message.token : null
@@ -181,7 +82,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 await prisma.sesionActiva.updateMany({
                     where: { sesionID, activa: true },
                     data: { activa: false },
-                }).catch(() => { /* sesión ya expirada */ })
+                }).catch(() => { /* sesión ya expirada o inexistente */ })
             }
         },
     },

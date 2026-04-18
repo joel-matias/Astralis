@@ -1,21 +1,14 @@
-import { EstadoUsuario, EstadoRuta, TipoRuta } from '@prisma/client'
+import { EstadoUsuario } from '@prisma/client'
 import { Rol } from './Rol'
-import { Ruta } from '../rutas/Ruta'
-import type { RutaDTO } from '../rutas/RutaDTO'
 
 export class Usuario {
     private usuarioID: string
     private nombreCompleto: string
     private email: string
-    private contrasena: string          // almacenada como hash bcrypt
+    private contrasena: string
     private intentosFallidos: number
-    private bloqueadoHasta: Date | null
     private estado: EstadoUsuario
-    private rolID: string
-    private rol: Rol | null
-
-    static readonly INTENTOS_MAX = 3
-    static readonly MINUTOS_BLOQUEO = 15
+    private rol: Rol | null // null si el Rol no fue cargado desde la BD
 
     constructor(
         usuarioID: string,
@@ -24,8 +17,6 @@ export class Usuario {
         contrasena: string,
         intentosFallidos: number,
         estado: EstadoUsuario,
-        rolID: string,
-        bloqueadoHasta: Date | null = null,
         rol: Rol | null = null
     ) {
         this.usuarioID = usuarioID
@@ -33,9 +24,7 @@ export class Usuario {
         this.email = email
         this.contrasena = contrasena
         this.intentosFallidos = intentosFallidos
-        this.bloqueadoHasta = bloqueadoHasta
         this.estado = estado
-        this.rolID = rolID
         this.rol = rol
     }
 
@@ -44,67 +33,40 @@ export class Usuario {
     getEmail(): string { return this.email }
     getContrasena(): string { return this.contrasena }
     getIntentosFallidos(): number { return this.intentosFallidos }
-    getBloqueadoHasta(): Date | null { return this.bloqueadoHasta }
     getEstado(): EstadoUsuario { return this.estado }
-    getRolID(): string { return this.rolID }
-    getRol(): Rol | null { return this.rol }
+
+    // obtenerRol: método del diagrama de comportamiento — navega hacia Rol
+    obtenerRol(): Rol | null { return this.rol }
 
     iniciarSesion(email: string, pass: string): boolean {
         if (this.esBloqueado()) return false
-        return this.validarCredenciales(email, pass)
+        const validas = this.validarCredenciales(email, pass)
+        if (!validas) this.incrementarIntento()
+        return validas
     }
 
-    bloquearCuenta(): void {
-        this.estado = EstadoUsuario.BLOQUEADO
-        this.bloqueadoHasta = new Date(
-            Date.now() + Usuario.MINUTOS_BLOQUEO * 60 * 1000
-        )
-    }
-
-    cerrarSesion(): void {
-        this.intentosFallidos = 0
-        // La SesionActiva correspondiente es invalidada por SesionActiva.invalidar()
-    }
-
-    // La verificación del hash se delega a AutenticacionService usando bcrypt.compare()
+    // Verifica formato básico de credenciales; la comparación real del hash va en ControladorAutenticacion
     validarCredenciales(email: string, pass: string): boolean {
         return this.email === email && pass.length > 0
     }
 
-    incrementarIntento(): void {
-        this.intentosFallidos++
-        if (this.intentosFallidos >= Usuario.INTENTOS_MAX) {
-            this.bloquearCuenta()
-        }
+    bloquearCuenta(): void {
+        this.estado = EstadoUsuario.BLOQUEADO
     }
 
-    crearRuta(datos: RutaDTO): Ruta {
-        return new Ruta(
-            '',
-            datos.codigoRuta,
-            datos.ciudadOrigen,
-            datos.ciudadDestino,
-            datos.terminalOrigen,
-            datos.terminalDestino,
-            datos.distanciaKm,
-            datos.tiempoEstimadoHrs,
-            datos.tipoRuta as TipoRuta,
-            datos.tarifaBase,
-            EstadoRuta.INACTIVA,
-            new Date()
-        )
+    // sesionID se recibe para que el servicio pueda invalidar la sesión correspondiente en BD
+    cerrarSesion(sesionID: string): void {
+        void sesionID // la invalidación real la hace ServicioSesion con este ID
+        this.intentosFallidos = 0
     }
 
     esBloqueado(): boolean {
-        if (this.estado !== EstadoUsuario.BLOQUEADO) return false
+        return this.estado === EstadoUsuario.BLOQUEADO
+    }
 
-        // Si el tiempo de bloqueo ya expiró, se desbloquea automáticamente
-        if (this.bloqueadoHasta && this.bloqueadoHasta < new Date()) {
-            this.estado = EstadoUsuario.ACTIVO
-            this.intentosFallidos = 0
-            this.bloqueadoHasta = null
-            return false
-        }
-        return true
+    // Acumula fallos y dispara bloquearCuenta al llegar al límite de 3 intentos
+    incrementarIntento(): void {
+        this.intentosFallidos++
+        if (this.intentosFallidos >= 3) this.bloquearCuenta()
     }
 }

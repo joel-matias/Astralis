@@ -1,6 +1,6 @@
 import MainNav from '@/components/MainNav'
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AndenesLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="bg-background text-on-background min-h-screen">
             <MainNav />

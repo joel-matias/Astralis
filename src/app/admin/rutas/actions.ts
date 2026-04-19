@@ -2,16 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { TipoRuta, EstadoRuta } from '@prisma/client'
+import { EstadoRuta } from '@prisma/client'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
 import type { RutaDTO } from '@/models/rutas/RutaDTO'
 import { ControladorRutas } from '@/services/rutas/ControladorRutas'
+import { RepositorioRutas } from '@/repositories/rutas/RepositorioRutas'
 import { APIMapas } from '@/services/rutas/APIMapas'
 
 export type { RutaDTO, ParadaDTO } from '@/models/rutas/RutaDTO'
 
 const controlador = new ControladorRutas()
+const repositorio = new RepositorioRutas()
 
 function mapTipoRuta(valor: string): 'Directa' | 'ConParadas' {
     if (valor === 'CON_PARADAS' || valor === 'ConParadas') return 'ConParadas'
@@ -20,7 +21,7 @@ function mapTipoRuta(valor: string): 'Directa' | 'ConParadas' {
 
 // RN1: código autogenerado basado en el total de rutas existentes
 export async function generarCodigoRuta(): Promise<string> {
-    const count = await prisma.ruta.count()
+    const count = await repositorio.contarRutas()
     return `RUT-${String(count + 1).padStart(3, '0')}`
 }
 
@@ -34,31 +35,13 @@ export async function calcularDistanciaRuta(
     return api.calcularDistanciaYTiempo(origen, destino, paradas)
 }
 
-// D7 S3: al activar registra en LogAuditoria igual que al crear
+// D7 S3: al activar/desactivar registra en LogAuditoria vía ControladorRutas → AuditoriaService
 export async function toggleEstadoRuta(rutaID: string, estadoActual: EstadoRuta) {
     const session = await auth()
-    const nuevoEstado = estadoActual === EstadoRuta.ACTIVA ? EstadoRuta.INACTIVA : EstadoRuta.ACTIVA
+    if (!session?.user?.id) return
 
-    const ruta = await prisma.ruta.update({
-        where: { rutaID },
-        data: { estado: nuevoEstado },
-        select: { codigoRuta: true },
-    })
-
-    if (session?.user?.id) {
-        const accion = nuevoEstado === EstadoRuta.ACTIVA ? 'ACTIVAR_RUTA' : 'DESACTIVAR_RUTA'
-        await prisma.logAuditoria.create({
-            data: {
-                usuarioID: session.user.id,
-                accion,
-                modulo: 'rutas',
-                resultado: 'Exito',
-                detalles: `Ruta ${nuevoEstado === EstadoRuta.ACTIVA ? 'activada' : 'desactivada'}: ${ruta.codigoRuta}`,
-                fechaHora: new Date(),
-            },
-        })
-    }
-
+    const estadoInterno: 'Activa' | 'Inactiva' = estadoActual === EstadoRuta.ACTIVA ? 'Activa' : 'Inactiva'
+    await controlador.toggleEstado(rutaID, estadoInterno, session.user.id)
     revalidatePath('/admin/rutas')
 }
 
@@ -121,46 +104,30 @@ export async function actualizarRuta(rutaID: string, data: RutaDTO): Promise<{ e
     const session = await auth()
     if (!session?.user?.id) return { error: 'Sesión no válida.' }
 
-    if (!data.omitirDuplicado) {
-        const duplicado = await prisma.ruta.findFirst({
-            where: { ciudadOrigen: data.ciudadOrigen, ciudadDestino: data.ciudadDestino, rutaID: { not: rutaID } },
-            select: { codigoRuta: true },
-        })
-        if (duplicado) return { warning: `Ya existe la ruta ${duplicado.codigoRuta} con el mismo origen y destino. ¿Deseas guardar de todas formas?` }
-    }
-
     try {
-        const tipoRutaPrisma = mapTipoRuta(data.tipoRuta as string) === 'ConParadas' ? TipoRuta.CON_PARADAS : TipoRuta.DIRECTA
-        await prisma.ruta.update({
-            where: { rutaID },
-            data: {
-                codigoRuta: data.codigoRuta.toUpperCase().trim(),
-                nombreRuta: data.nombreRuta ?? `${data.ciudadOrigen} - ${data.ciudadDestino}`,
-                ciudadOrigen: data.ciudadOrigen,
-                terminalOrigen: data.terminalOrigen,
-                ciudadDestino: data.ciudadDestino,
-                terminalDestino: data.terminalDestino,
-                distanciaKm: data.distanciaKm,
-                tiempoEstimadoHrs: data.tiempoEstimadoHrs,
-                tipoRuta: tipoRutaPrisma,
-                tarifaBase: data.tarifaBase,
-                paradas: {
-                    deleteMany: {},
-                    create: data.paradas.map((p, i) => ({
-                        nombreParada: p.nombreParada,
-                        ciudad: p.ciudad,
-                        ordenEnRuta: i + 1,
-                        distanciaDesdeOrigenKm: p.distanciaDesdeOrigenKm,
-                        tiempoEsperaMin: p.tiempoEsperaMin,
-                        tarifaDesdeOrigen: p.tarifaDesdeOrigen,
-                    })),
-                },
-            },
+        const resultado = await controlador.procesarActualizacion(rutaID, {
+            codigoRuta: data.codigoRuta,
+            nombreRuta: data.nombreRuta ?? `${data.ciudadOrigen} - ${data.ciudadDestino}`,
+            ciudadOrigen: data.ciudadOrigen,
+            terminalOrigen: data.terminalOrigen,
+            ciudadDestino: data.ciudadDestino,
+            terminalDestino: data.terminalDestino,
+            distanciaKm: data.distanciaKm,
+            tiempoEstimadoHrs: data.tiempoEstimadoHrs,
+            tipoRuta: mapTipoRuta(data.tipoRuta as string),
+            tarifaBase: data.tarifaBase,
+            estado: 'Activa',
+            paradas: data.paradas.map((p, i) => ({ ...p, ordenEnRuta: i + 1, tiempoDesdeOrigen: 0 })),
+            usuarioID: session.user.id,
         })
+
+        if (resultado.duplicado && !data.omitirDuplicado) {
+            return { warning: `Ya existe la ruta ${resultado.duplicado} con el mismo origen y destino. ¿Deseas guardar de todas formas?` }
+        }
     } catch (e: unknown) {
-        const err = e as { code?: string }
+        const err = e as { message?: string; code?: string }
         if (err?.code === 'P2002') return { error: 'El código de ruta ya existe.' }
-        return { error: 'Error al actualizar la ruta. Intenta de nuevo.' }
+        return { error: err?.message ?? 'Error al actualizar la ruta. Intenta de nuevo.' }
     }
 
     redirect('/admin/rutas')

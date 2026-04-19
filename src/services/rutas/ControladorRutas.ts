@@ -121,7 +121,44 @@ export class ControladorRutas {
         return { valida: true, errorDetalle: null }
     }
 
-    // Notifica a los sistemas relacionados cuando una ruta cambia de estado o datos.
+    async toggleEstado(rutaID: string, estadoActual: 'Activa' | 'Inactiva', usuarioID: string): Promise<void> {
+        const nuevoEstado: 'Activa' | 'Inactiva' = estadoActual === 'Activa' ? 'Inactiva' : 'Activa'
+        const codigoRuta = await this.repositorio.actualizarEstado(rutaID, nuevoEstado)
+        const accion = nuevoEstado === 'Activa' ? 'ACTIVAR_RUTA' : 'DESACTIVAR_RUTA'
+        await this.auditoria.registrarEvento(usuarioID, accion, codigoRuta)
+    }
+
+    async procesarActualizacion(rutaID: string, datosRuta: DatosCreacionRuta): Promise<ResultadoCreacion> {
+        const datosPlanos = datosRuta as unknown as Record<string, unknown>
+        if (!this.validador.validarCamposObligatorios(datosPlanos)) {
+            throw new Error('Completa todos los campos obligatorios.')
+        }
+        if (!this.validador.validarOrigenDistintoDestino(datosRuta.ciudadOrigen, datosRuta.ciudadDestino)) {
+            throw new Error('El origen y destino no pueden ser iguales.')
+        }
+        if (!this.validador.validarValoresNumericos(datosRuta.distanciaKm, datosRuta.tiempoEstimadoHrs, datosRuta.tarifaBase)) {
+            throw new Error('Distancia, tiempo y tarifa deben ser mayores a 0.')
+        }
+
+        const codigoDuplicado = await this.repositorio.verificarDuplicado(
+            datosRuta.ciudadOrigen,
+            datosRuta.ciudadDestino,
+            rutaID
+        )
+
+        const paradasProcesadas = datosRuta.tipoRuta === 'ConParadas' && datosRuta.paradas?.length
+            ? this.gestorParadas.procesarParadas(datosRuta.paradas)
+            : []
+
+        await this.repositorio.actualizarRuta(rutaID, { ...datosRuta, paradas: paradasProcesadas })
+
+        return {
+            codigoGenerado: datosRuta.codigoRuta,
+            rutaID,
+            ...(codigoDuplicado ? { duplicado: codigoDuplicado } : {}),
+        }
+    }
+
     // Stub — la integración real con notificaciones se define en CU posteriores.
     async notificarCambios(rutaID: string): Promise<void> {
         void rutaID

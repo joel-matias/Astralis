@@ -1,12 +1,14 @@
 import Link from 'next/link'
-import { RutaForm } from '../_components/RutaForm'
-import { crearRuta } from '../actions'
+import { generarCodigoRuta } from '../actions'
+import { RutaWizard } from '../_components/RutaWizard'
 
-export default function NuevaRutaPage() {
+export default async function NuevaRutaPage() {
+    // RN1: código autogenerado que se pre-llena en el formulario inicial
+    const codigoGenerado = await generarCodigoRuta()
+
     return (
         <div className="pt-8 pb-12 px-6 max-w-5xl mx-auto">
 
-            {/* Header */}
             <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <nav className="flex items-center gap-2 text-secondary mb-2 text-sm font-medium">
@@ -31,7 +33,7 @@ export default function NuevaRutaPage() {
                 </div>
             </header>
 
-            <RutaForm modo="crear" action={crearRuta} />
+            <RutaWizard codigoGenerado={codigoGenerado} />
         </div>
     )
 }

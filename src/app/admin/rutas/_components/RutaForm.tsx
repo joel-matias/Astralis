@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { TipoRuta } from '@prisma/client'
 import type { RutaDTO, ParadaDTO } from '@/models/rutas/RutaDTO'
 import { CityInput } from './CityInput'
 
@@ -23,7 +22,7 @@ interface Props {
     action: (data: RutaDTO) => Promise<{ error: string } | { warning: string } | void>
     defaultValues?: Partial<{
         codigoRuta: string
-        tipoRuta: TipoRuta
+        tipoRuta: string
         tarifaBase: number
         ciudadOrigen: string
         terminalOrigen: string
@@ -42,8 +41,8 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
     const [warning, setWarning] = useState<string | null>(null)
     const lastDataRef = useRef<RutaDTO | null>(null)
 
-    const [tipoRuta, setTipoRuta] = useState<TipoRuta>(
-        defaultValues.tipoRuta ?? TipoRuta.DIRECTA
+    const [tipoRuta, setTipoRuta] = useState<string>(
+        defaultValues.tipoRuta ?? 'DIRECTA'
     )
 
     const [paradas, setParadas] = useState<ParadaItem[]>(
@@ -70,7 +69,9 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                 key: `new-${Date.now()}`,
                 nombreParada: nuevaParada.nombreParada.trim(),
                 ciudad: nuevaParada.ciudad.trim(),
+                ordenEnRuta: prev.length + 1,
                 distanciaDesdeOrigenKm: distancia,
+                tiempoDesdeOrigen: 0,
                 tiempoEsperaMin: espera,
                 tarifaDesdeOrigen: tarifa,
             },
@@ -99,7 +100,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
             terminalDestino: get('terminalDestino'),
             distanciaKm: parseFloat(get('distanciaKm')) || 0,
             tiempoEstimadoHrs: parseFloat(get('tiempoEstimadoHrs')) || 0,
-            paradas: tipoRuta === TipoRuta.CON_PARADAS ? paradas : [],
+            paradas: tipoRuta === 'CON_PARADAS' ? paradas : [],
         }
 
         startTransition(async () => {
@@ -205,7 +206,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                             <select
                                 name="tipoRuta"
                                 value={tipoRuta}
-                                onChange={e => setTipoRuta(e.target.value as TipoRuta)}
+                                onChange={e => setTipoRuta(e.target.value)}
                                 className="w-full bg-surface-container-low border-0 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-on-surface transition-all text-sm"
                             >
                                 <option value="DIRECTA">DIRECTA</option>
@@ -347,7 +348,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                     </div>
                 </section>
 
-                {tipoRuta === TipoRuta.CON_PARADAS && (
+                {tipoRuta === 'CON_PARADAS' && (
                     <section className="bg-surface-container-lowest rounded-xl p-8 shadow-[0_0_40px_rgba(20,27,44,0.04)] overflow-hidden">
 
                         <div className="flex items-center justify-between mb-8">

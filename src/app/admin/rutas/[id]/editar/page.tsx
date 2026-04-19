@@ -62,10 +62,12 @@ export default async function EditarRutaPage({ params }: PageProps) {
                     distanciaKm: Number(ruta.distanciaKm),
                     tiempoEstimadoHrs: Number(ruta.tiempoEstimadoHrs),
                 }}
-                defaultParadas={ruta.paradas.map(p => ({
+                defaultParadas={ruta.paradas.map((p, i) => ({
                     nombreParada: p.nombreParada,
                     ciudad: p.ciudad,
+                    ordenEnRuta: p.ordenEnRuta ?? i + 1,
                     distanciaDesdeOrigenKm: Number(p.distanciaDesdeOrigenKm),
+                    tiempoDesdeOrigen: 0,
                     tiempoEsperaMin: p.tiempoEsperaMin,
                     tarifaDesdeOrigen: Number(p.tarifaDesdeOrigen),
                 }))}

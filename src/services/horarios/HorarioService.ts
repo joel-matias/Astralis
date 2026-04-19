@@ -6,12 +6,13 @@ import type { Conductor } from '@/models/horarios/Conductor'
 import type { Ruta } from '@/models/horarios/Ruta'
 import { NotificacionService } from './NotificacionService'
 import { ValidadorRecursos } from './ValidadorRecursos'
+import { RepositorioHorarios } from '@/repositories/horarios/RepositorioHorarios'
 
 export class HorarioService {
     private notificacion = new NotificacionService()
     private validador = new ValidadorRecursos()
+    private repositorio = new RepositorioHorarios()
 
-    // Crea y persiste un horario a partir del DTO; la persistencia real la ejecuta HorarioRepository (D9)
     programarHorario(datos: HorarioDTO): Horario {
         return new Horario(
             crypto.randomUUID(),
@@ -27,7 +28,6 @@ export class HorarioService {
         )
     }
 
-    // Verifica que autobús y conductor estén disponibles y sin conflictos antes de asignar
     validarRecursos(autobus: Autobus, conductor: Conductor): boolean {
         return (
             autobus.cumpleIntervalMantenimiento() &&
@@ -41,7 +41,6 @@ export class HorarioService {
         return this.validador.validarDisponibilidadRecursos(autobusID, conductorID, fecha, hora)
     }
 
-    // La verificación real de conflictos de horario requiere consulta a BD (HorarioRepository)
     verificarConflictoHorario(fecha: Date, hora: Date): boolean {
         void fecha
         void hora
@@ -53,29 +52,33 @@ export class HorarioService {
         return ruta.getTarifaBase()
     }
 
-    // Delega la notificación de asignación al conductor vía NotificacionService
     notificarConductor(conductorID: string, horario: Horario): void {
         this.notificacion.notificarAsignacion(conductorID, horario.getHorarioID())
     }
 
-    // Registra la acción en LogAuditoria; el repositorio persiste en BD (D9)
-    registrarEnLog(accion: string): void {
-        void accion
+    async registrarEnLog(usuarioID: string, accion: string, detalles: string): Promise<void> {
+        await this.repositorio.guardarLog(usuarioID, accion, detalles)
     }
 
-    // D7: orquesta el flujo completo de programación siguiendo los pasos 4-10 del diagrama de secuencia
-    solicitarProgramacion(datos: HorarioDTO): string {
+    // D7: orquesta el flujo completo — valida → programa → persiste → notifica → registra
+    async solicitarProgramacion(datos: HorarioDTO): Promise<string> {
         const disponible = this.verificarDisponibilidadRecursos(
             datos.autobusID,
             datos.conductorID,
             datos.fechaInicio,
             datos.horaSalida
         )
-        if (!disponible) return 'E1: recursos no disponibles'
+        if (!disponible) throw new Error('E1: recursos no disponibles')
 
         const horario = this.programarHorario(datos)
+        const horarioID = await this.repositorio.save(horario, datos.programadoPorID, datos.fechaFin)
         this.notificarConductor(datos.conductorID, horario)
-        this.registrarEnLog(`Horario programado exitosamente. ID: ${horario.getHorarioID()}`)
-        return horario.getHorarioID()
+        await this.registrarEnLog(datos.programadoPorID, 'CREAR_HORARIO', `Horario programado: ${horarioID}`)
+        return horarioID
+    }
+
+    async cancelar(horarioID: string, usuarioID: string): Promise<void> {
+        await this.repositorio.cancelar(horarioID)
+        await this.registrarEnLog(usuarioID, 'CANCELAR_HORARIO', `Horario cancelado: ${horarioID}`)
     }
 }

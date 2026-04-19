@@ -11,4 +11,6 @@ export interface HorarioDTO {
     vigencia: VigenciaHorario
     precioBase: number
     estado?: EstadoHorario
+    fechaFin?: Date
+    programadoPorID: string
 }

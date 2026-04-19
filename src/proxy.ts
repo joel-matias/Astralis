@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server'
 
 const RUTAS_PROTEGIDAS: Record<string, string[]> = {
     // D9: PermisoMiddleware — rutas de gestión accesibles por Admin y Gerente de Operaciones
-    '/admin/rutas': ['ADMIN', 'GERENTE'],
-    '/admin':       ['ADMIN'],
-    '/operaciones': ['ADMIN', 'GERENTE'],
+    '/admin/horarios': ['ADMIN', 'GERENTE'],
+    '/admin/rutas':    ['ADMIN', 'GERENTE'],
+    '/admin':          ['ADMIN'],
     '/pos':         ['ADMIN', 'VENDEDOR_TAQUILLA'],
     '/andenes':     ['ADMIN', 'SUPERVISOR_ANDENES'],
     '/equipaje':    ['ADMIN', 'ENCARGADO_EQUIPAJE'],

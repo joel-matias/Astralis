@@ -1,2 +1,2 @@
-export { Horario } from './Horario'
-export type { HorarioDTO } from './HorarioDTO'
+// Módulo de horarios — clases de dominio pendientes (CU3: Programar Horario de Viaje)
+export {}

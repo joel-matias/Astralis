@@ -1,14 +1,17 @@
-import { TipoRuta, EstadoRuta } from '@prisma/client'
-import { ParadaIntermedia } from './ParadaIntermedia'
-import { RutaDTO } from './RutaDTO'
-import { Horario } from '../horarios/Horario'
+import type { RutaDTO } from './RutaDTO'
+import type { ParadaIntermedia } from './ParadaIntermedia'
 
+export type TipoRuta = 'Directa' | 'ConParadas'
+export type EstadoRuta = 'Activa' | 'Inactiva'
+
+// Entidad principal del caso de uso Crear Ruta — almacena la configuración completa del trayecto
 export class Ruta {
     private rutaID: string
-    private codigoRuta: string           // único en el sistema
+    private codigoRuta: string
+    private nombreRuta: string
     private ciudadOrigen: string
-    private ciudadDestino: string
     private terminalOrigen: string
+    private ciudadDestino: string
     private terminalDestino: string
     private distanciaKm: number
     private tiempoEstimadoHrs: number
@@ -16,15 +19,15 @@ export class Ruta {
     private tarifaBase: number
     private estado: EstadoRuta
     private fechaCreacion: Date
-    private paradas: ParadaIntermedia[]
-    private horarios: Horario[]
+    private paradas: ParadaIntermedia[] // lista ordenada gestionada por agregarParada()
 
     constructor(
         rutaID: string,
         codigoRuta: string,
+        nombreRuta: string,
         ciudadOrigen: string,
-        ciudadDestino: string,
         terminalOrigen: string,
+        ciudadDestino: string,
         terminalDestino: string,
         distanciaKm: number,
         tiempoEstimadoHrs: number,
@@ -32,14 +35,14 @@ export class Ruta {
         tarifaBase: number,
         estado: EstadoRuta,
         fechaCreacion: Date = new Date(),
-        paradas: ParadaIntermedia[] = [],
-        horarios: Horario[] = []
+        paradas: ParadaIntermedia[] = []
     ) {
         this.rutaID = rutaID
         this.codigoRuta = codigoRuta
+        this.nombreRuta = nombreRuta
         this.ciudadOrigen = ciudadOrigen
-        this.ciudadDestino = ciudadDestino
         this.terminalOrigen = terminalOrigen
+        this.ciudadDestino = ciudadDestino
         this.terminalDestino = terminalDestino
         this.distanciaKm = distanciaKm
         this.tiempoEstimadoHrs = tiempoEstimadoHrs
@@ -48,14 +51,14 @@ export class Ruta {
         this.estado = estado
         this.fechaCreacion = fechaCreacion
         this.paradas = paradas
-        this.horarios = horarios
     }
 
     getRutaID(): string { return this.rutaID }
     getCodigoRuta(): string { return this.codigoRuta }
+    getNombreRuta(): string { return this.nombreRuta }
     getCiudadOrigen(): string { return this.ciudadOrigen }
-    getCiudadDestino(): string { return this.ciudadDestino }
     getTerminalOrigen(): string { return this.terminalOrigen }
+    getCiudadDestino(): string { return this.ciudadDestino }
     getTerminalDestino(): string { return this.terminalDestino }
     getDistanciaKm(): number { return this.distanciaKm }
     getTiempoEstimadoHrs(): number { return this.tiempoEstimadoHrs }
@@ -64,7 +67,8 @@ export class Ruta {
     getEstado(): EstadoRuta { return this.estado }
     getFechaCreacion(): Date { return this.fechaCreacion }
 
-    crearDatosRuta(datos: RutaDTO): boolean {
+    // Valida que los datos mínimos del formulario sean suficientes para crear la ruta
+    crear(datos: RutaDTO): boolean {
         return (
             datos.ciudadOrigen.trim().length > 0 &&
             datos.ciudadDestino.trim().length > 0 &&
@@ -73,9 +77,11 @@ export class Ruta {
         )
     }
 
+    // Valida la integridad completa de la instancia antes de persistir
     validarDatos(): boolean {
         return (
             this.codigoRuta.trim().length > 0 &&
+            this.nombreRuta.trim().length > 0 &&
             this.ciudadOrigen.trim().length > 0 &&
             this.ciudadDestino.trim().length > 0 &&
             this.ciudadOrigen !== this.ciudadDestino &&
@@ -84,49 +90,31 @@ export class Ruta {
         )
     }
 
+    // Compara origen y destino contra esta instancia para detectar si ya existe una ruta igual
     verificarDuplicado(origen: string, destino: string): boolean {
         return (
-            this.ciudadOrigen.toLowerCase() === origen.toLowerCase() &&
-            this.ciudadDestino.toLowerCase() === destino.toLowerCase()
+            this.ciudadOrigen.toLowerCase() === origen.trim().toLowerCase() &&
+            this.ciudadDestino.toLowerCase() === destino.trim().toLowerCase()
         )
     }
 
+    // Retorna la distancia almacenada; si APIMapas calculó un valor mayor, ControladorRutas lo reemplaza antes
     calcularDistancia(): number {
         return this.distanciaKm
     }
 
-    agregarParada(parada: ParadaIntermedia): void {
-        if (parada.validar()) {
-            this.paradas.push(parada)
+    // Agrega una parada validada y reordena la lista por ordenEnRuta
+    agregarParada(p: ParadaIntermedia): void {
+        if (p.validar()) {
+            this.paradas.push(p)
             this.paradas.sort((a, b) => a.getOrdenEnRuta() - b.getOrdenEnRuta())
         }
     }
 
-    activar(): void {
-        this.estado = EstadoRuta.ACTIVA
-    }
+    // Cambia el estado de la ruta; activar() habilita que pueda asignársele horarios
+    activar(): void { this.estado = 'Activa' }
+    desactivar(): void { this.estado = 'Inactiva' }
 
-    desactivar(): void {
-        this.estado = EstadoRuta.INACTIVA
-    }
-
-    getParadas(): ParadaIntermedia[] {
-        return [...this.paradas]
-    }
-
-    getHorarios(): Horario[] {
-        return [...this.horarios]
-    }
-
-    estaActiva(): boolean {
-        return this.estado === EstadoRuta.ACTIVA
-    }
-
-    getTarifaBaseCalculada(): number {
-        return this.tarifaBase
-    }
-
-    getDistanciaKmCalc(): number {
-        return this.distanciaKm
-    }
+    // Retorna copia de la lista para que ControladorRutas arme los datosCompletos antes de guardar
+    getParadas(): ParadaIntermedia[] { return [...this.paradas] }
 }

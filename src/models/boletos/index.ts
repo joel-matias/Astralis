@@ -1,0 +1,12 @@
+// D1-D2-D6 CU4 — Exports del módulo boletos
+export * from './VendedorTaquilla'
+export * from './Cliente'
+export * from './SistemaPago'
+export * from './LogVentas'
+export * from './Boleto'
+export * from './Viaje'
+export * from './Asiento'
+export * from './ComprobanteFiscal'
+export * from './SistemaVentas'
+export * from './GeneradorBoletos'
+export * from './EstadoVenta'

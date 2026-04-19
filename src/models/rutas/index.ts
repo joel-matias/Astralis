@@ -1,8 +1,6 @@
 export { Ruta } from './Ruta'
 export type { TipoRuta, EstadoRuta } from './Ruta'
 export { ParadaIntermedia } from './ParadaIntermedia'
-export { Horario } from './Horario'
-export type { EstadoHorario } from './Horario'
 export { Usuario } from './Usuario'
 export { LogAuditoria } from './LogAuditoria'
 export type { RutaDTO, DatosParadaDTO } from './RutaDTO'

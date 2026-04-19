@@ -33,4 +33,12 @@ export class GestorParadas {
         validas.sort((a, b) => a.getOrdenEnRuta() - b.getOrdenEnRuta())
         return validas
     }
+
+    // D9: ParadaService.validarOrden — verifica que el orden sea único y consecutivo en la lista
+    validarOrden(nuevaParada: DatosParada, paradasExistentes: DatosParada[]): boolean {
+        const ordenesExistentes = paradasExistentes.map(p => p.ordenEnRuta)
+        if (ordenesExistentes.includes(nuevaParada.ordenEnRuta)) return false
+        const ordenEsperado = paradasExistentes.length + 1
+        return nuevaParada.ordenEnRuta === ordenEsperado
+    }
 }

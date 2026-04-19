@@ -1,6 +1,7 @@
 import { ValidadorRuta } from './ValidadorRuta'
 import { GestorParadas } from './GestorParadas'
 import { APIMapas } from './APIMapas'
+import { AuditoriaService } from './AuditoriaService'
 import { RepositorioRutas } from '@/repositories/rutas/RepositorioRutas'
 import { LogAuditoria } from '@/models/rutas/LogAuditoria'
 import type { DatosParada } from './GestorParadas'
@@ -32,6 +33,7 @@ export class ControladorRutas {
     private gestorParadas = new GestorParadas()
     private apiMapas = new APIMapas()
     private repositorio = new RepositorioRutas()
+    private auditoria = new AuditoriaService()
 
     async procesarCreacion(datosRuta: DatosCreacionRuta): Promise<ResultadoCreacion> {
         // Pasos 8-13: validación en tres fases
@@ -74,7 +76,7 @@ export class ControladorRutas {
             paradas: paradasProcesadas,
         })
 
-        // Paso 22: registrar en LogAuditoria
+        // Paso 22: registrar en LogAuditoria vía AuditoriaService (D8: service::auditoria)
         const log = new LogAuditoria(
             crypto.randomUUID(),
             datosRuta.usuarioID,
@@ -83,9 +85,8 @@ export class ControladorRutas {
             'Exito'
         )
         log.registrar('CREAR_RUTA', 'Exito')
-        await this.repositorio.registrarLog(
+        await this.auditoria.registrarCreacion(
             datosRuta.usuarioID,
-            log.getAccion(),
             codigoGenerado,
             log.getFechaHora()
         )
@@ -95,6 +96,29 @@ export class ControladorRutas {
             rutaID,
             ...(codigoDuplicado ? { duplicado: codigoDuplicado } : {}),
         }
+    }
+
+    // D7: validación server-side de cada parada antes de agregarla a la lista
+    // distanciaTotal = 0 cuando aún no se ha calculado (paso 2 del wizard)
+    async validarParada(
+        parada: DatosParada,
+        distanciaTotal: number,
+        paradasExistentes: DatosParada[]
+    ): Promise<{ valida: boolean; errorDetalle: string | null }> {
+        const procesadas = this.gestorParadas.procesarParadas([{ ...parada, ordenEnRuta: 1, tiempoDesdeOrigen: 0 }])
+        if (procesadas.length === 0) {
+            return { valida: false, errorDetalle: 'Datos de la parada incompletos o inválidos.' }
+        }
+        if (distanciaTotal > 0 && parada.distanciaDesdeOrigenKm >= distanciaTotal) {
+            return { valida: false, errorDetalle: 'La distancia de la parada excede la distancia total de la ruta.' }
+        }
+        const ciudadDuplicada = paradasExistentes.some(
+            p => p.ciudad.trim().toLowerCase() === parada.ciudad.trim().toLowerCase()
+        )
+        if (ciudadDuplicada) {
+            return { valida: false, errorDetalle: `Ya existe una parada en ${parada.ciudad}.` }
+        }
+        return { valida: true, errorDetalle: null }
     }
 
     // Notifica a los sistemas relacionados cuando una ruta cambia de estado o datos.

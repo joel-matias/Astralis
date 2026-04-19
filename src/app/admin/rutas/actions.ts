@@ -34,10 +34,53 @@ export async function calcularDistanciaRuta(
     return api.calcularDistanciaYTiempo(origen, destino, paradas)
 }
 
+// D7 S3: al activar registra en LogAuditoria igual que al crear
 export async function toggleEstadoRuta(rutaID: string, estadoActual: EstadoRuta) {
+    const session = await auth()
     const nuevoEstado = estadoActual === EstadoRuta.ACTIVA ? EstadoRuta.INACTIVA : EstadoRuta.ACTIVA
-    await prisma.ruta.update({ where: { rutaID }, data: { estado: nuevoEstado } })
+
+    const ruta = await prisma.ruta.update({
+        where: { rutaID },
+        data: { estado: nuevoEstado },
+        select: { codigoRuta: true },
+    })
+
+    if (session?.user?.id) {
+        const accion = nuevoEstado === EstadoRuta.ACTIVA ? 'ACTIVAR_RUTA' : 'DESACTIVAR_RUTA'
+        await prisma.logAuditoria.create({
+            data: {
+                usuarioID: session.user.id,
+                accion,
+                modulo: 'rutas',
+                resultado: 'Exito',
+                detalles: `Ruta ${nuevoEstado === EstadoRuta.ACTIVA ? 'activada' : 'desactivada'}: ${ruta.codigoRuta}`,
+                fechaHora: new Date(),
+            },
+        })
+    }
+
     revalidatePath('/admin/rutas')
+}
+
+// D7: validación server-side de cada parada — llamada desde PasoConfiguracionParadas al confirmar
+export async function validarParadaServidor(
+    parada: { nombreParada: string; ciudad: string; distanciaDesdeOrigenKm: number; tiempoEsperaMin: number; tarifaDesdeOrigen: number },
+    distanciaTotal: number,
+    paradasExistentes: { ciudad: string }[]
+): Promise<{ valida: boolean; errorDetalle: string | null }> {
+    return controlador.validarParada(
+        { ...parada, ordenEnRuta: 1, tiempoDesdeOrigen: 0 },
+        distanciaTotal,
+        paradasExistentes.map(p => ({
+            nombreParada: '',
+            ciudad: p.ciudad,
+            ordenEnRuta: 0,
+            distanciaDesdeOrigenKm: 0,
+            tiempoDesdeOrigen: 0,
+            tiempoEsperaMin: 0,
+            tarifaDesdeOrigen: 0,
+        }))
+    )
 }
 
 // El redirect lo maneja el wizard después del diálogo PreguntandoActivacion

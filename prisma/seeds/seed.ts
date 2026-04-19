@@ -144,7 +144,7 @@ async function main() {
 
     for (const andenData of andenes) {
         // Verificar si ya existe
-        const existente = await prisma.anden.findUnique({
+        const existente = await prisma.anden.findFirst({
             where: { numero: andenData.numero }
         })
 

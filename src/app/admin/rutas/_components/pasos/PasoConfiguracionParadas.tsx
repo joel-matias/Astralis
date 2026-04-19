@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { CityInput } from '../CityInput'
+import { validarParadaServidor } from '../../actions'
 
 // Parada con key de React para gestión de lista
 export interface ParadaWizard {
@@ -33,8 +34,8 @@ export function PasoConfiguracionParadas({ paradas: paradasIniciales, onFinaliza
     const [paradas, setParadas] = useState<ParadaWizard[]>(paradasIniciales)
     const [capturando, setCapturando] = useState(false)
     const [nueva, setNueva] = useState({ ...VACIA })
-    // E5: parada con datos inconsistentes
     const [errorParada, setErrorParada] = useState<string | null>(null)
+    const [validando, startValidacion] = useTransition()
 
     function iniciarCaptura() {
         setNueva({ ...VACIA })
@@ -42,10 +43,10 @@ export function PasoConfiguracionParadas({ paradas: paradasIniciales, onFinaliza
         setCapturando(true)
     }
 
+    // D7: validarParada → ControladorRutas → GestorParadas (server-side)
     function confirmarParada() {
         setErrorParada(null)
 
-        // ValidandoParada: nombre y ciudad obligatorios
         if (!nueva.nombreParada.trim() || !nueva.ciudad.trim()) {
             setErrorParada('El nombre y la ciudad de la parada son obligatorios.')
             return
@@ -55,27 +56,40 @@ export function PasoConfiguracionParadas({ paradas: paradasIniciales, onFinaliza
         const espera = parseFloat(nueva.tiempoEsperaMin) || 0
         const tarifa = parseFloat(nueva.tarifaDesdeOrigen) || 0
 
-        // E5: ErrorParadaInvalida — valores negativos o inconsistentes
         if (distancia < 0 || espera < 0 || tarifa < 0) {
             setErrorParada('Los valores numéricos de la parada no pueden ser negativos.')
             return
         }
 
-        setParadas(prev => [
-            ...prev,
-            {
-                key: `parada-${Date.now()}`,
-                nombreParada: nueva.nombreParada.trim(),
-                ciudad: nueva.ciudad.trim(),
-                ordenEnRuta: prev.length + 1,
-                distanciaDesdeOrigenKm: distancia,
-                tiempoDesdeOrigen: 0,
-                tiempoEsperaMin: espera,
-                tarifaDesdeOrigen: tarifa,
-            },
-        ])
-        setCapturando(false)
-        setNueva({ ...VACIA })
+        startValidacion(async () => {
+            const resultado = await validarParadaServidor(
+                { nombreParada: nueva.nombreParada.trim(), ciudad: nueva.ciudad.trim(), distanciaDesdeOrigenKm: distancia, tiempoEsperaMin: espera, tarifaDesdeOrigen: tarifa },
+                0,  // distanciaTotal desconocida en este paso; se omite la validación de rango
+                paradas.map(p => ({ ciudad: p.ciudad }))
+            )
+
+            // E5: ErrorParadaInvalida — el servidor detectó datos inconsistentes
+            if (!resultado.valida) {
+                setErrorParada(resultado.errorDetalle ?? 'Parada inválida.')
+                return
+            }
+
+            setParadas(prev => [
+                ...prev,
+                {
+                    key: `parada-${Date.now()}`,
+                    nombreParada: nueva.nombreParada.trim(),
+                    ciudad: nueva.ciudad.trim(),
+                    ordenEnRuta: prev.length + 1,
+                    distanciaDesdeOrigenKm: distancia,
+                    tiempoDesdeOrigen: 0,
+                    tiempoEsperaMin: espera,
+                    tarifaDesdeOrigen: tarifa,
+                },
+            ])
+            setCapturando(false)
+            setNueva({ ...VACIA })
+        })
     }
 
     function eliminarParada(key: string) {
@@ -219,12 +233,12 @@ export function PasoConfiguracionParadas({ paradas: paradasIniciales, onFinaliza
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex items-center gap-2 justify-center">
-                                            <button type="button" onClick={confirmarParada}
-                                                className="text-primary hover:text-primary-container font-bold text-sm transition-colors">
-                                                OK
+                                            <button type="button" onClick={confirmarParada} disabled={validando}
+                                                className="text-primary hover:text-primary-container font-bold text-sm transition-colors disabled:opacity-50">
+                                                {validando ? '...' : 'OK'}
                                             </button>
-                                            <button type="button" onClick={() => { setCapturando(false); setErrorParada(null) }}
-                                                className="text-secondary hover:text-error font-bold text-sm transition-colors">
+                                            <button type="button" onClick={() => { setCapturando(false); setErrorParada(null) }} disabled={validando}
+                                                className="text-secondary hover:text-error font-bold text-sm transition-colors disabled:opacity-50">
                                                 ✕
                                             </button>
                                         </div>

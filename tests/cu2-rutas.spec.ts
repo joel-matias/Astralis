@@ -1,78 +1,101 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { PrismaClient, EstadoRuta, TipoRuta } from '@prisma/client'
 
 const prisma = new PrismaClient()
-
 const ADMIN = { email: 'admin@astralis.mx', password: 'admin1234' }
 
+// Fixture routes — created in beforeAll, deleted in afterAll
 const CODIGO_BASE = 'RUT-CU2-BASE'
-const CODIGO_DUP = 'RUT-CU2-DUP'
-const CODIGO_UI_D = 'RUT-CU2-UD'
-const CODIGO_UI_P = 'RUT-CU2-UP'
+const CODIGO_DUP  = 'RUT-CU2-DUP'
 
 const ORI_BASE = 'Ixtlán de Juárez'
 const DES_BASE = 'Miahuatlán de Porfirio'
-const ORI_DUP = 'Tlacolula de Matamoros'
-const DES_DUP = 'Ocotlán de Morelos'
-const ORI_UI_D = 'Etla'
-const DES_UI_D = 'Zaachila'
-const ORI_UI_P = 'Tlaxiaco'
-const DES_UI_P = 'Nochixtlán'
+const ORI_DUP  = 'Tlacolula de Matamoros'
+const DES_DUP  = 'Ocotlán de Morelos'
+
+// Wizard-created routes during tests
+const ORI_UI_D   = 'Etla'
+const DES_UI_D   = 'Zaachila'
+const ORI_UI_ACT = 'Loma Bonita'
+const DES_UI_ACT = 'Valle Nacional'
+const ORI_UI_P   = 'Tlaxiaco'
+const DES_UI_P   = 'Nochixtlán'
 
 let authCookies: any[] = []
 
-async function llenarFormulario(
-    page: import('@playwright/test').Page,
+// --- Helpers ---
+
+async function llenarPaso1(
+    page: Page,
     opts: {
-        codigo: string
         origen: string
         destino: string
+        tarifa?: string
+        tipo?: 'DIRECTA' | 'CON_PARADAS'
         terminalO?: string
         terminalD?: string
-        distancia?: string
-        tiempo?: string
-        tarifa?: string
-        tipo?: 'DIRECTA' | 'CON ESCALA'
     }
 ) {
-    await page.fill('input[name="codigoRuta"]', opts.codigo)
-    if (opts.tipo) await page.selectOption('select[name="tipoRuta"]', { label: opts.tipo })
-    if (opts.tarifa !== undefined) await page.fill('input[name="tarifaBase"]', opts.tarifa)
+    if (opts.tipo) await page.selectOption('select[name="tipoRuta"]', opts.tipo)
+    await page.fill('input[name="tarifaBase"]', opts.tarifa ?? '200')
     await page.fill('input[name="ciudadOrigen"]', opts.origen)
     await page.fill('input[name="terminalOrigen"]', opts.terminalO ?? 'Terminal Central')
     await page.fill('input[name="ciudadDestino"]', opts.destino)
     await page.fill('input[name="terminalDestino"]', opts.terminalD ?? 'Terminal Central')
-    if (opts.distancia !== undefined) await page.fill('input[name="distanciaKm"]', opts.distancia)
-    if (opts.tiempo !== undefined) await page.fill('input[name="tiempoEstimadoHrs"]', opts.tiempo)
+    await page.getByRole('button', { name: 'Siguiente' }).click()
 }
 
-async function guardar(page: import('@playwright/test').Page, modo: 'crear' | 'editar' = 'crear') {
-    const label = modo === 'crear' ? 'Guardar y Finalizar' : 'Guardar Cambios'
-    await page.getByRole('button', { name: label }).click()
+async function llenarPaso3(page: Page, distancia: string, tiempo: string) {
+    await expect(page.getByTestId('input-distancia-km')).toBeVisible({ timeout: 8_000 })
+    await page.getByTestId('input-distancia-km').fill(distancia)
+    await page.getByTestId('input-tiempo-hrs').fill(tiempo)
 }
 
-async function limpiarDatosPrueba() {
-    const codigos = [CODIGO_BASE, CODIGO_DUP, CODIGO_UI_D, CODIGO_UI_P]
-    for (const codigo of codigos) {
-        const ruta = await prisma.ruta.findFirst({ where: { codigoRuta: codigo } })
-        if (ruta) {
-            await prisma.paradaIntermedia.deleteMany({ where: { rutaID: ruta.rutaID } })
-            await prisma.ruta.delete({ where: { rutaID: ruta.rutaID } })
-        }
-    }
-    const extras = await prisma.ruta.findMany({
-        where: {
-            OR: [
-                { ciudadOrigen: ORI_UI_D, ciudadDestino: DES_UI_D },
-                { ciudadOrigen: ORI_UI_P, ciudadDestino: DES_UI_P },
-            ],
-        },
-    })
-    for (const r of extras) {
+async function agregarParada(page: Page, opts: {
+    nombre: string
+    ciudad: string
+    distancia?: string
+    espera?: string
+    tarifa?: string
+}) {
+    await page.getByRole('button', { name: 'Agregar Parada' }).click()
+    const filaCaptura = page.locator('tr').filter({ has: page.getByRole('button', { name: 'OK' }) })
+    await filaCaptura.getByPlaceholder('Nombre Estación').fill(opts.nombre)
+    await filaCaptura.getByPlaceholder('Ciudad, Estado').fill(opts.ciudad)
+    const numInputs = filaCaptura.locator('input[type="number"]')
+    await numInputs.nth(0).fill(opts.distancia ?? '50')
+    await numInputs.nth(1).fill(opts.espera ?? '10')
+    await numInputs.nth(2).fill(opts.tarifa ?? '100')
+    await page.getByRole('button', { name: 'OK' }).click()
+}
+
+async function deleteByOriDes(ori: string, des: string) {
+    const rutas = await prisma.ruta.findMany({ where: { ciudadOrigen: ori, ciudadDestino: des } })
+    for (const r of rutas) {
         await prisma.paradaIntermedia.deleteMany({ where: { rutaID: r.rutaID } })
         await prisma.ruta.delete({ where: { rutaID: r.rutaID } })
     }
 }
+
+async function limpiarDatosPrueba() {
+    for (const codigo of [CODIGO_BASE, CODIGO_DUP]) {
+        const r = await prisma.ruta.findFirst({ where: { codigoRuta: codigo } })
+        if (r) {
+            await prisma.paradaIntermedia.deleteMany({ where: { rutaID: r.rutaID } })
+            await prisma.ruta.delete({ where: { rutaID: r.rutaID } })
+        }
+    }
+    for (const [ori, des] of [
+        [ORI_UI_D, DES_UI_D],
+        [ORI_UI_ACT, DES_UI_ACT],
+        [ORI_UI_P, DES_UI_P],
+        [ORI_DUP, DES_DUP],
+    ]) {
+        await deleteByOriDes(ori, des)
+    }
+}
+
+// --- Setup ---
 
 test.beforeAll(async ({ browser }) => {
     await limpiarDatosPrueba()
@@ -134,18 +157,17 @@ test.afterAll(async () => {
     await prisma.$disconnect()
 })
 
+// --- Tests ---
+
 test.describe('CU2 — Administración de Rutas', () => {
 
     test('lista muestra encabezados y la ruta pre-creada', async ({ page }) => {
         await page.goto('/admin/rutas')
-        await expect(page).toHaveURL('/admin/rutas')
-
         await expect(page.getByRole('columnheader', { name: /Código/i })).toBeVisible()
         await expect(page.getByRole('columnheader', { name: /Trayecto/i })).toBeVisible()
         await expect(page.getByRole('columnheader', { name: /Tipo/i })).toBeVisible()
         await expect(page.getByRole('columnheader', { name: /Estado/i })).toBeVisible()
         await expect(page.getByRole('columnheader', { name: /Tarifa/i })).toBeVisible()
-
         await expect(page.getByText(CODIGO_BASE)).toBeVisible()
         await expect(page.getByText(ORI_BASE)).toBeVisible()
     })
@@ -154,7 +176,6 @@ test.describe('CU2 — Administración de Rutas', () => {
         await page.goto('/admin/rutas')
         await page.getByPlaceholder(/Buscar por código/).fill(CODIGO_BASE)
         await page.waitForURL(/q=RUT-CU2-BASE/, { timeout: 6_000 })
-
         await expect(page.getByText(CODIGO_BASE)).toBeVisible()
         await expect(page.getByText(CODIGO_DUP)).not.toBeVisible()
     })
@@ -163,191 +184,161 @@ test.describe('CU2 — Administración de Rutas', () => {
         await page.goto('/admin/rutas')
         await page.locator('select:has(option[value="INACTIVA"])').selectOption('INACTIVA')
         await page.waitForURL(/estado=INACTIVA/, { timeout: 6_000 })
-
         await expect(page.getByText(CODIGO_BASE)).toBeVisible()
         await expect(page.getByText(CODIGO_DUP)).not.toBeVisible()
     })
 
-    test('crear ruta DIRECTA exitosamente — queda INACTIVA y registra log', async ({ page }) => {
+    // --- Paso 1 validation (D6: E1, E2, E3) ---
+
+    test('E1: campos obligatorios vacíos muestran error en paso 1', async ({ page }) => {
         await page.goto('/admin/rutas/nueva')
-        await expect(page.getByRole('heading', { name: 'Nueva Ruta' })).toBeVisible()
+        // codigoRuta está pre-relleno; basta con no rellenar origen/destino/terminales
+        await page.getByRole('button', { name: 'Siguiente' }).click()
+        await expect(page.getByTestId('error-campos-vacios'))
+            .toContainText('Completa todos los campos obligatorios', { timeout: 8_000 })
+        await expect(page.getByRole('button', { name: 'Siguiente' })).toBeVisible()
+    })
 
-        await llenarFormulario(page, {
-            codigo: CODIGO_UI_D,
-            origen: ORI_UI_D,
-            destino: DES_UI_D,
-            distancia: '180',
-            tiempo: '2.5',
-            tarifa: '320',
-        })
+    test('E2: ciudad origen igual a destino muestra error en paso 1', async ({ page }) => {
+        await page.goto('/admin/rutas/nueva')
+        await page.fill('input[name="tarifaBase"]', '200')
+        await page.fill('input[name="ciudadOrigen"]', 'Oaxaca')
+        await page.fill('input[name="terminalOrigen"]', 'Terminal Central')
+        await page.fill('input[name="ciudadDestino"]', 'Oaxaca')
+        await page.fill('input[name="terminalDestino"]', 'Terminal Central')
+        await page.getByRole('button', { name: 'Siguiente' }).click()
+        await expect(page.getByTestId('error-origen-destino'))
+            .toContainText('origen y destino no pueden ser iguales', { timeout: 8_000 })
+    })
 
-        await guardar(page)
+    test('E3: tarifa base igual a 0 muestra error en paso 1', async ({ page }) => {
+        await page.goto('/admin/rutas/nueva')
+        await page.fill('input[name="tarifaBase"]', '0')
+        await page.fill('input[name="ciudadOrigen"]', 'Oaxaca')
+        await page.fill('input[name="terminalOrigen"]', 'Terminal Central')
+        await page.fill('input[name="ciudadDestino"]', 'Tuxtepec')
+        await page.fill('input[name="terminalDestino"]', 'Terminal Central')
+        await page.getByRole('button', { name: 'Siguiente' }).click()
+        await expect(page.getByTestId('error-valores-numericos'))
+            .toContainText('tarifa base debe ser mayor a 0', { timeout: 8_000 })
+    })
 
+    // --- Paso 3 validation ---
+
+    test('guardar sin distancia ni tiempo muestra error en paso 3', async ({ page }) => {
+        await page.goto('/admin/rutas/nueva')
+        await llenarPaso1(page, { origen: 'Etla', destino: 'Ejutla de Crespo', tarifa: '150' })
+        // paso 3 aparece — no rellenar distancia/tiempo
+        await expect(page.getByTestId('input-distancia-km')).toBeVisible({ timeout: 8_000 })
+        await page.getByRole('button', { name: 'Guardar Ruta' }).click()
+        await expect(page.getByTestId('ruta-form-error'))
+            .toContainText('Ingresa la distancia y el tiempo estimado', { timeout: 8_000 })
+    })
+
+    // --- Happy paths ---
+
+    test('crear ruta DIRECTA → no activar → queda INACTIVA + log CREAR_RUTA', async ({ page }) => {
+        await page.goto('/admin/rutas/nueva')
+        await llenarPaso1(page, { origen: ORI_UI_D, destino: DES_UI_D, tarifa: '320' })
+        await llenarPaso3(page, '180', '2.5')
+        await page.getByRole('button', { name: 'Guardar Ruta' }).click()
+
+        await expect(page.getByRole('button', { name: 'No activar por ahora' })).toBeVisible({ timeout: 10_000 })
+        await page.getByRole('button', { name: 'No activar por ahora' }).click()
         await expect(page).toHaveURL('/admin/rutas', { timeout: 12_000 })
-        await expect(page.getByText(CODIGO_UI_D)).toBeVisible()
 
-        const ruta = await prisma.ruta.findFirst({ where: { codigoRuta: CODIGO_UI_D } })
+        const ruta = await prisma.ruta.findFirst({ where: { ciudadOrigen: ORI_UI_D, ciudadDestino: DES_UI_D } })
         expect(ruta).not.toBeNull()
         expect(ruta?.estado).toBe(EstadoRuta.INACTIVA)
         expect(ruta?.nombreRuta).toBe(`${ORI_UI_D} - ${DES_UI_D}`)
 
         const log = await prisma.logAuditoria.findFirst({
-            where: { accion: 'CREAR_RUTA', detalles: { contains: CODIGO_UI_D } },
+            where: { accion: 'CREAR_RUTA', detalles: { contains: ruta!.codigoRuta } },
+            orderBy: { fechaHora: 'desc' },
         })
         expect(log).not.toBeNull()
         expect(log?.resultado).toBe('Exito')
     })
 
-    test('E1: campos obligatorios vacíos muestran error de validación', async ({ page }) => {
+    test('crear ruta DIRECTA → Activar Ahora → queda ACTIVA + log ACTIVAR_RUTA', async ({ page }) => {
         await page.goto('/admin/rutas/nueva')
+        await llenarPaso1(page, { origen: ORI_UI_ACT, destino: DES_UI_ACT, tarifa: '280' })
+        await llenarPaso3(page, '150', '2')
+        await page.getByRole('button', { name: 'Guardar Ruta' }).click()
 
-        // Los inputs tienen `required` HTML5 que bloquea el onSubmit antes del server action;
-        // se elimina para alcanzar la validación del lado del servidor.
-        await page.evaluate(() => {
-            document.querySelectorAll('input[required], select[required]')
-                .forEach(el => el.removeAttribute('required'))
-        })
-
-        await guardar(page)
-
-        await expect(page.getByTestId('ruta-form-error'))
-            .toContainText('Completa todos los campos obligatorios', { timeout: 8_000 })
-
-        await expect(page).toHaveURL('/admin/rutas/nueva')
-    })
-
-    test('E2: ciudad origen igual a destino muestra error', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: 'RUT-TEMP',
-            origen: 'Oaxaca',
-            destino: 'Oaxaca',
-            distancia: '100',
-            tarifa: '150',
-        })
-        await guardar(page)
-
-        await expect(page.getByTestId('ruta-form-error'))
-            .toContainText('La ciudad de origen y destino no pueden ser iguales', { timeout: 8_000 })
-    })
-
-    test('E3: distancia igual a 0 muestra error de valor inválido', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: 'RUT-TEMP',
-            origen: 'Loma Bonita',
-            destino: 'Valle Nacional',
-            distancia: '0',
-            tarifa: '150',
-        })
-        await guardar(page)
-
-        await expect(page.getByTestId('ruta-form-error'))
-            .toContainText('La distancia debe ser mayor a 0 km', { timeout: 8_000 })
-    })
-
-    test('E3: tarifa base igual a 0 muestra error de valor inválido', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: 'RUT-TEMP',
-            origen: 'Loma Bonita',
-            destino: 'Valle Nacional',
-            distancia: '120',
-            tarifa: '0',
-        })
-        await guardar(page)
-
-        await expect(page.getByTestId('ruta-form-error'))
-            .toContainText('La tarifa base debe ser mayor a $0', { timeout: 8_000 })
-    })
-
-    test('E6: mismo origen-destino muestra error con código de ruta existente', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: 'RUT-NUEVO-X',
-            origen: ORI_DUP,
-            destino: DES_DUP,
-            distancia: '130',
-            tarifa: '200',
-        })
-        await guardar(page)
-
-        const error = page.getByTestId('ruta-form-error')
-        await expect(error).toContainText('Ya existe una ruta de', { timeout: 8_000 })
-        await expect(error).toContainText(CODIGO_DUP)
-    })
-
-    test('código de ruta duplicado muestra error de unicidad', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: CODIGO_DUP,
-            origen: 'Putla Villa de Guerrero',
-            destino: 'Tlapa de Comonfort',
-            distancia: '95',
-            tarifa: '160',
-        })
-        await guardar(page)
-
-        await expect(page.getByTestId('ruta-form-error'))
-            .toContainText('El código de ruta ya existe', { timeout: 8_000 })
-    })
-
-    test('CON_PARADAS sin paradas muestra error de validación', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: 'RUT-TEMP-P',
-            tipo: 'CON ESCALA',
-            origen: 'Zimatlán de Álvarez',
-            destino: 'Ejutla de Crespo',
-            distancia: '75',
-            tarifa: '130',
-        })
-
-        await guardar(page)
-
-        await expect(page.getByTestId('ruta-form-error'))
-            .toContainText('Una ruta CON PARADAS debe tener al menos una parada', { timeout: 8_000 })
-    })
-
-    test('crear ruta CON_PARADAS con parada completa — exitoso', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: CODIGO_UI_P,
-            tipo: 'CON ESCALA',
-            origen: ORI_UI_P,
-            destino: DES_UI_P,
-            distancia: '220',
-            tiempo: '3.5',
-            tarifa: '380',
-        })
-
-        await page.getByRole('button', { name: 'Agregar Parada' }).click()
-
-        await page.getByPlaceholder('Nombre Estación').fill('Estación Mixteca')
-        await page.getByPlaceholder('Ciudad, Estado').fill('Huautla de Jiménez, Oax.')
-
-        const numericInputs = page.locator('tr:has(button:has-text("OK")) input[type="number"]')
-        await numericInputs.nth(0).fill('90')
-        await numericInputs.nth(1).fill('15')
-        await numericInputs.nth(2).fill('180')
-
-        await page.getByRole('button', { name: 'OK' }).click()
-
-        await expect(page.getByText('Estación Mixteca')).toBeVisible()
-
-        await guardar(page)
+        await expect(page.getByRole('button', { name: 'Activar Ahora' })).toBeVisible({ timeout: 10_000 })
+        await page.getByRole('button', { name: 'Activar Ahora' }).click()
         await expect(page).toHaveURL('/admin/rutas', { timeout: 12_000 })
-        await expect(page.getByText(CODIGO_UI_P)).toBeVisible()
+
+        const ruta = await prisma.ruta.findFirst({ where: { ciudadOrigen: ORI_UI_ACT, ciudadDestino: DES_UI_ACT } })
+        expect(ruta).not.toBeNull()
+        expect(ruta?.estado).toBe(EstadoRuta.ACTIVA)
+
+        const logCrear = await prisma.logAuditoria.findFirst({
+            where: { accion: 'CREAR_RUTA', detalles: { contains: ruta!.codigoRuta } },
+            orderBy: { fechaHora: 'desc' },
+        })
+        expect(logCrear).not.toBeNull()
+
+        const logActivar = await prisma.logAuditoria.findFirst({
+            where: { accion: 'ACTIVAR_RUTA', detalles: { contains: ruta!.codigoRuta } },
+            orderBy: { fechaHora: 'desc' },
+        })
+        expect(logActivar).not.toBeNull()
+        expect(logActivar?.resultado).toBe('Exito')
+    })
+
+    // --- E4: Duplicado (D6) ---
+
+    test('E4: mismo origen-destino muestra advertencia de duplicado', async ({ page }) => {
+        await page.goto('/admin/rutas/nueva')
+        await llenarPaso1(page, { origen: ORI_DUP, destino: DES_DUP, tarifa: '220' })
+        await llenarPaso3(page, '130', '2')
+        await page.getByRole('button', { name: 'Guardar Ruta' }).click()
+
+        const warning = page.getByTestId('ruta-form-warning')
+        await expect(warning).toContainText('Ya existe la ruta', { timeout: 10_000 })
+        await expect(warning).toContainText(CODIGO_DUP)
+
+        // Cancelar — usuario decide no guardar
+        await page.getByRole('button', { name: 'Cancelar' }).click()
+        await expect(page.getByTestId('ruta-form-warning')).not.toBeVisible()
+    })
+
+    // --- CON_PARADAS (D6: paso 2) ---
+
+    test('E5: parada con ciudad duplicada muestra error', async ({ page }) => {
+        await page.goto('/admin/rutas/nueva')
+        await llenarPaso1(page, { origen: 'Juxtlahuaca', destino: 'Putla Villa', tarifa: '200', tipo: 'CON_PARADAS' })
+
+        await expect(page.getByRole('button', { name: 'Agregar Parada' })).toBeVisible({ timeout: 8_000 })
+        await agregarParada(page, { nombre: 'Estación Mixteca', ciudad: 'Huautla de Jiménez' })
+        await expect(page.getByText('Estación Mixteca')).toBeVisible({ timeout: 8_000 })
+
+        // Intentar agregar segunda parada con la misma ciudad
+        await agregarParada(page, { nombre: 'Parada Dos', ciudad: 'Huautla de Jiménez' })
+        await expect(page.getByTestId('error-parada-invalida'))
+            .toContainText('Ya existe una parada en Huautla de Jiménez', { timeout: 8_000 })
+    })
+
+    test('crear ruta CON_PARADAS con parada → exitoso', async ({ page }) => {
+        await page.goto('/admin/rutas/nueva')
+        await llenarPaso1(page, { origen: ORI_UI_P, destino: DES_UI_P, tarifa: '380', tipo: 'CON_PARADAS' })
+
+        await expect(page.getByRole('button', { name: 'Agregar Parada' })).toBeVisible({ timeout: 8_000 })
+        await agregarParada(page, { nombre: 'Estación Mixteca', ciudad: 'Teposcolula', distancia: '80', espera: '15', tarifa: '150' })
+        await expect(page.getByText('Estación Mixteca')).toBeVisible({ timeout: 8_000 })
+
+        await page.getByRole('button', { name: 'Finalizar Paradas' }).click()
+        await llenarPaso3(page, '220', '3.5')
+        await page.getByRole('button', { name: 'Guardar Ruta' }).click()
+
+        await expect(page.getByRole('button', { name: 'No activar por ahora' })).toBeVisible({ timeout: 10_000 })
+        await page.getByRole('button', { name: 'No activar por ahora' }).click()
+        await expect(page).toHaveURL('/admin/rutas', { timeout: 12_000 })
 
         const ruta = await prisma.ruta.findFirst({
-            where: { codigoRuta: CODIGO_UI_P },
+            where: { ciudadOrigen: ORI_UI_P, ciudadDestino: DES_UI_P },
             include: { paradas: true },
         })
         expect(ruta).not.toBeNull()
@@ -357,32 +348,13 @@ test.describe('CU2 — Administración de Rutas', () => {
         expect(ruta?.paradas[0].ordenEnRuta).toBe(1)
     })
 
-    test('cancelar formulario regresa a la lista sin crear ruta', async ({ page }) => {
-        await page.goto('/admin/rutas/nueva')
-
-        await llenarFormulario(page, {
-            codigo: 'RUT-CANCELADA',
-            origen: 'Yetla',
-            destino: 'Tepelmeme',
-        })
-
-        await page.getByRole('button', { name: 'Cancelar Cambios' }).click()
-
-        await expect(page).toHaveURL('/admin/rutas', { timeout: 8_000 })
-
-        const rutaCancelada = await prisma.ruta.findFirst({ where: { codigoRuta: 'RUT-CANCELADA' } })
-        expect(rutaCancelada).toBeNull()
-    })
+    // --- Detail and edit ---
 
     test('ver detalle muestra datos correctos de la ruta', async ({ page }) => {
         await page.goto('/admin/rutas')
-
         const fila = page.locator('tr', { has: page.getByText(CODIGO_BASE) })
         await fila.getByTitle('Ver detalle').click()
-
         await expect(page).toHaveURL(/\/admin\/rutas\/.+$/, { timeout: 8_000 })
-
-        // Usar first() porque el texto de ciudad se repite en distintos elementos del bento grid
         await expect(page.getByText(CODIGO_BASE).first()).toBeVisible()
         await expect(page.getByText(ORI_BASE).first()).toBeVisible()
         await expect(page.getByText(DES_BASE).first()).toBeVisible()
@@ -394,44 +366,36 @@ test.describe('CU2 — Administración de Rutas', () => {
 
         await page.goto(`/admin/rutas/${ruta.rutaID}/editar`)
         await expect(page.getByRole('heading', { name: 'Editar Ruta' })).toBeVisible()
-
         await expect(page.locator('input[name="codigoRuta"]')).toHaveValue(CODIGO_BASE)
         await expect(page.locator('input[name="ciudadOrigen"]')).toHaveValue(ORI_BASE)
 
         await page.fill('input[name="tarifaBase"]', '500')
-
-        await guardar(page, 'editar')
+        await page.getByRole('button', { name: 'Guardar Cambios' }).click()
         await expect(page).toHaveURL('/admin/rutas', { timeout: 12_000 })
 
         const actualizada = await prisma.ruta.findFirst({ where: { codigoRuta: CODIGO_BASE } })
         expect(Number(actualizada?.tarifaBase)).toBe(500)
 
-        await prisma.ruta.update({
-            where: { rutaID: ruta.rutaID },
-            data: { tarifaBase: 420 },
-        })
+        await prisma.ruta.update({ where: { rutaID: ruta.rutaID }, data: { tarifaBase: 420 } })
     })
+
+    // --- Toggle (D7: log con codigoRuta) ---
 
     test('toggle INACTIVA → ACTIVA registra log ACTIVAR_RUTA en BD', async ({ page }) => {
         const ruta = await prisma.ruta.findFirst({ where: { codigoRuta: CODIGO_BASE } })
         if (!ruta) throw new Error(`Ruta ${CODIGO_BASE} no encontrada`)
-        await prisma.ruta.update({
-            where: { rutaID: ruta.rutaID },
-            data: { estado: EstadoRuta.INACTIVA },
-        })
+        await prisma.ruta.update({ where: { rutaID: ruta.rutaID }, data: { estado: EstadoRuta.INACTIVA } })
 
         await page.goto('/admin/rutas')
-
         const fila = page.locator('tr', { has: page.getByText(CODIGO_BASE) })
         await fila.getByTitle('Activar').click()
-
         await expect(fila.getByTitle('Desactivar')).toBeVisible({ timeout: 8_000 })
 
         const actualizada = await prisma.ruta.findFirst({ where: { rutaID: ruta.rutaID } })
         expect(actualizada?.estado).toBe(EstadoRuta.ACTIVA)
 
         const log = await prisma.logAuditoria.findFirst({
-            where: { accion: 'ACTIVAR_RUTA', detalles: { contains: ruta.rutaID } },
+            where: { accion: 'ACTIVAR_RUTA', detalles: { contains: ruta.codigoRuta } },
             orderBy: { fechaHora: 'desc' },
         })
         expect(log).not.toBeNull()
@@ -441,28 +405,25 @@ test.describe('CU2 — Administración de Rutas', () => {
     test('toggle ACTIVA → INACTIVA registra log DESACTIVAR_RUTA en BD', async ({ page }) => {
         const ruta = await prisma.ruta.findFirst({ where: { codigoRuta: CODIGO_DUP } })
         if (!ruta) throw new Error(`Ruta ${CODIGO_DUP} no encontrada`)
-        await prisma.ruta.update({
-            where: { rutaID: ruta.rutaID },
-            data: { estado: EstadoRuta.ACTIVA },
-        })
+        await prisma.ruta.update({ where: { rutaID: ruta.rutaID }, data: { estado: EstadoRuta.ACTIVA } })
 
         await page.goto('/admin/rutas')
-
         const fila = page.locator('tr', { has: page.getByText(CODIGO_DUP) })
         await fila.getByTitle('Desactivar').click()
-
         await expect(fila.getByTitle('Activar')).toBeVisible({ timeout: 8_000 })
 
         const actualizada = await prisma.ruta.findFirst({ where: { rutaID: ruta.rutaID } })
         expect(actualizada?.estado).toBe(EstadoRuta.INACTIVA)
 
         const log = await prisma.logAuditoria.findFirst({
-            where: { accion: 'DESACTIVAR_RUTA', detalles: { contains: ruta.rutaID } },
+            where: { accion: 'DESACTIVAR_RUTA', detalles: { contains: ruta.codigoRuta } },
             orderBy: { fechaHora: 'desc' },
         })
         expect(log).not.toBeNull()
         expect(log?.resultado).toBe('Exito')
     })
+
+    // --- Auth ---
 
     test('sin sesión activa /admin/rutas redirige a /login', async ({ browser }) => {
         const ctx = await browser.newContext()
@@ -471,5 +432,4 @@ test.describe('CU2 — Administración de Rutas', () => {
         await expect(page).toHaveURL(/\/login/, { timeout: 8_000 })
         await ctx.close()
     })
-
 })

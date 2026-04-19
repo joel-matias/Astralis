@@ -173,6 +173,7 @@ export function PasoVisualizacionMapa({ datos, paradas, onAtras, onGuardado }: P
                             </label>
                             <div className="flex items-center gap-2">
                                 <input
+                                    data-testid="input-distancia-km"
                                     type="number" min="0" step="0.1"
                                     value={distanciaKm || ''}
                                     onChange={e => setDistanciaKm(parseFloat(e.target.value) || 0)}
@@ -194,6 +195,7 @@ export function PasoVisualizacionMapa({ datos, paradas, onAtras, onGuardado }: P
                             </label>
                             <div className="flex items-center gap-2">
                                 <input
+                                    data-testid="input-tiempo-hrs"
                                     type="number" min="0" step="0.5"
                                     value={tiempoHrs || ''}
                                     onChange={e => setTiempoHrs(parseFloat(e.target.value) || 0)}

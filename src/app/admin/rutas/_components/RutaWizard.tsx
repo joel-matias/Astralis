@@ -65,7 +65,7 @@ export function RutaWizard({ codigoGenerado }: Props) {
     // Paso actual para el indicador (1-based, excluyendo el estado de activación)
     const pasoActual = estado === 'ingreso_basico' ? 1
         : estado === 'configurando_paradas' ? 2
-        : 3
+            : 3
     const totalPasos = datosBasicos?.tipoRuta === 'CON_PARADAS' ? 3 : 2
 
     const pasosMostrados = datosBasicos?.tipoRuta === 'CON_PARADAS'
@@ -87,20 +87,18 @@ export function RutaWizard({ codigoGenerado }: Props) {
                         const completado = i < pasoIndex
                         return (
                             <div key={nombre} className="flex items-center flex-1">
-                                <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all ${
-                                    activo
+                                <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all ${activo
                                         ? 'bg-primary text-on-primary shadow-md shadow-primary/20'
                                         : completado
-                                        ? 'bg-surface-container-high text-primary'
-                                        : 'bg-surface-container-low text-outline'
-                                }`}>
-                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                        activo
+                                            ? 'bg-surface-container-high text-primary'
+                                            : 'bg-surface-container-low text-outline'
+                                    }`}>
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${activo
                                             ? 'bg-on-primary/20'
                                             : completado
-                                            ? 'bg-primary text-on-primary'
-                                            : 'bg-surface-container text-outline'
-                                    }`}>
+                                                ? 'bg-primary text-on-primary'
+                                                : 'bg-surface-container text-outline'
+                                        }`}>
                                         {completado
                                             ? <span className="material-symbols-outlined text-sm">check</span>
                                             : i + 1
@@ -149,7 +147,7 @@ export function RutaWizard({ codigoGenerado }: Props) {
 
             {/* RutaGuardadaInactiva → PreguntandoActivacion */}
             {estado === 'preguntando_activacion' && (
-                <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex items-center justify-center min-h-100">
                     <div className="bg-surface-container-lowest rounded-2xl p-10 shadow-[0_0_80px_rgba(20,27,44,0.08)] max-w-md w-full text-center">
 
                         <div className="w-16 h-16 rounded-2xl bg-primary-fixed flex items-center justify-center mx-auto mb-6">

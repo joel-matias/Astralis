@@ -1,6 +1,6 @@
 import { SesionActiva } from '@/models/seguridad/SesionActiva'
-import { ControladorAutenticacion } from '@/services/ControladorAutenticacion'
-import { TokenService } from '@/services/TokenService'
+import { ControladorAutenticacion } from '@/services/seguridad/ControladorAutenticacion'
+import { TokenService } from '@/services/seguridad/TokenService'
 
 // «service» del diagrama de dependencias — fachada sobre ControladorAutenticacion
 // Expone la interfaz del diagrama y centraliza las constantes de negocio

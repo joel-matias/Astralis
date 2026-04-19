@@ -2,9 +2,9 @@ import bcrypt from 'bcryptjs'
 import { EstadoUsuario } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { LogAuditoria } from '@/models/seguridad/LogAuditoria'
-import { RepositorioUsuario } from '@/repositories/RepositorioUsuario'
-import { ServicioSesion } from '@/services/ServicioSesion'
-import { NotificacionService } from '@/services/NotificacionService'
+import { RepositorioUsuario } from '@/repositories/seguridad/RepositorioUsuario'
+import { ServicioSesion } from '@/services/seguridad/ServicioSesion'
+import { NotificacionService } from '@/services/seguridad/NotificacionService'
 
 // Resultado tipado para que auth.ts decida qué hacer sin acoplar excepciones aquí
 export type ResultadoAutenticacion =

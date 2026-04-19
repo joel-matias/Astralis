@@ -1,5 +1,5 @@
 import { LogAuditoria } from '@/models/seguridad/LogAuditoria'
-import { LogRepository } from '@/repositories/LogRepository'
+import { LogRepository } from '@/repositories/seguridad/LogRepository'
 
 // service::auditoria — centraliza el registro y consulta de eventos de auditoría
 export class AuditoriaService {

@@ -2,7 +2,7 @@ import NextAuth from 'next-auth'
 import { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/prisma'
-import { ControladorAutenticacion } from '@/services/ControladorAutenticacion'
+import { ControladorAutenticacion } from '@/services/seguridad/ControladorAutenticacion'
 
 // E4: error personalizado que NextAuth expone al cliente como code='cuenta_bloqueada'
 class CuentaBloqueadaError extends CredentialsSignin {

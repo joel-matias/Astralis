@@ -260,7 +260,7 @@ test.describe('CU3 — Programar Horario de Viaje', () => {
         expect(h!.frecuencia).toBe(FrecuenciaHorario.DIARIO)
         expect(h!.vigencia).toBe(VigenciaHorario.DEFINIDA)
         expect(h!.fechaFin).not.toBeNull()
-        expect(Number(h!.precioBase)).toBe(350)
+        expect(Number(h!.precioBase)).toBe(320) // precio viene de ruta.getTarifaBase(), no del input del form
     })
 
     // ── Detalle ─────────────────────────────────────────────────────────────

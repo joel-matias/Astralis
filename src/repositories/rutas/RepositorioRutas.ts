@@ -1,35 +1,51 @@
-import { TipoRuta, EstadoRuta } from '@prisma/client'
+import { TipoRuta as PT, EstadoRuta as PE } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import type { ParadaIntermedia } from '@/models/rutas/ParadaIntermedia'
-import type { DatosParada } from '@/services/rutas/GestorParadas'
+import { Ruta, type TipoRuta, type EstadoRuta } from '@/models/rutas/Ruta'
+import { ParadaIntermedia } from '@/models/rutas/ParadaIntermedia'
 
-export interface DatosCompletos {
-    codigoRuta: string
-    nombreRuta: string
-    ciudadOrigen: string
-    terminalOrigen: string
-    ciudadDestino: string
-    terminalDestino: string
-    distanciaKm: number
-    tiempoEstimadoHrs: number
-    tipoRuta: 'Directa' | 'ConParadas'
-    tarifaBase: number
-    estado: 'Activa' | 'Inactiva'
-    paradas: ParadaIntermedia[]
-    usuarioID: string
-}
-
-const mapTipoRuta: Record<'Directa' | 'ConParadas', TipoRuta> = {
-    Directa: TipoRuta.DIRECTA,
-    ConParadas: TipoRuta.CON_PARADAS,
-}
-
-const mapEstadoRuta: Record<'Activa' | 'Inactiva', EstadoRuta> = {
-    Activa: EstadoRuta.ACTIVA,
-    Inactiva: EstadoRuta.INACTIVA,
-}
+const MAP_TIPO: Record<TipoRuta, PT>   = { Directa: PT.DIRECTA, ConParadas: PT.CON_PARADAS }
+const MAP_ESTADO: Record<EstadoRuta, PE> = { Activa: PE.ACTIVA, Inactiva: PE.INACTIVA }
 
 export class RepositorioRutas {
+
+    // D9: recupera una instancia completa de Ruta con sus ParadaIntermedia desde BD
+    async findByID(rutaID: string): Promise<Ruta | null> {
+        const data = await prisma.ruta.findUnique({
+            where: { rutaID },
+            include: { paradas: { orderBy: { ordenEnRuta: 'asc' } } },
+        })
+        if (!data) return null
+
+        const paradas = data.paradas.map(p => new ParadaIntermedia(
+            p.paradaID,
+            p.rutaID,
+            p.nombreParada,
+            p.ciudad,
+            p.ordenEnRuta,
+            Number(p.distanciaDesdeOrigenKm),
+            0,
+            p.tiempoEsperaMin,
+            Number(p.tarifaDesdeOrigen)
+        ))
+
+        return new Ruta(
+            data.rutaID,
+            data.codigoRuta,
+            data.nombreRuta,
+            data.ciudadOrigen,
+            data.terminalOrigen,
+            data.ciudadDestino,
+            data.terminalDestino,
+            Number(data.distanciaKm),
+            Number(data.tiempoEstimadoHrs),
+            data.tipoRuta === PT.CON_PARADAS ? 'ConParadas' : 'Directa',
+            Number(data.tarifaBase),
+            data.estado === PE.ACTIVA ? 'Activa' : 'Inactiva',
+            data.creadoEn,
+            paradas
+        )
+    }
+
     async verificarDuplicado(origen: string, destino: string, excluirRutaID?: string): Promise<string | null> {
         const duplicado = await prisma.ruta.findFirst({
             where: {
@@ -42,73 +58,76 @@ export class RepositorioRutas {
         return duplicado?.codigoRuta ?? null
     }
 
-    async guardarRuta(datos: DatosCompletos): Promise<{ codigoRuta: string; rutaID: string }> {
-        const ruta = await prisma.ruta.create({
+    // Persiste una instancia de Ruta con sus paradas; usa los getters del modelo
+    async guardarRuta(ruta: Ruta, usuarioID: string): Promise<{ codigoRuta: string; rutaID: string }> {
+        const result = await prisma.ruta.create({
             data: {
-                codigoRuta: datos.codigoRuta.toUpperCase().trim(),
-                nombreRuta: datos.nombreRuta,
-                ciudadOrigen: datos.ciudadOrigen,
-                terminalOrigen: datos.terminalOrigen,
-                ciudadDestino: datos.ciudadDestino,
-                terminalDestino: datos.terminalDestino,
-                distanciaKm: datos.distanciaKm,
-                tiempoEstimadoHrs: datos.tiempoEstimadoHrs,
-                tipoRuta: mapTipoRuta[datos.tipoRuta],
-                tarifaBase: datos.tarifaBase,
-                estado: mapEstadoRuta[datos.estado],
-                creadoPorID: datos.usuarioID,
+                rutaID:           ruta.getRutaID(),
+                codigoRuta:       ruta.getCodigoRuta().toUpperCase().trim(),
+                nombreRuta:       ruta.getNombreRuta(),
+                ciudadOrigen:     ruta.getCiudadOrigen(),
+                terminalOrigen:   ruta.getTerminalOrigen(),
+                ciudadDestino:    ruta.getCiudadDestino(),
+                terminalDestino:  ruta.getTerminalDestino(),
+                distanciaKm:      ruta.getDistanciaKm(),
+                tiempoEstimadoHrs: ruta.getTiempoEstimadoHrs(),
+                tipoRuta:         MAP_TIPO[ruta.getTipoRuta()],
+                tarifaBase:       ruta.getTarifaBase(),
+                estado:           MAP_ESTADO[ruta.getEstado()],
+                creadoPorID:      usuarioID,
                 paradas: {
-                    create: datos.paradas.map(p => ({
-                        nombreParada: p.getNombreParada(),
-                        ciudad: p.getCiudad(),
-                        ordenEnRuta: p.getOrdenEnRuta(),
+                    create: ruta.getParadas().map(p => ({
+                        nombreParada:           p.getNombreParada(),
+                        ciudad:                 p.getCiudad(),
+                        ordenEnRuta:            p.getOrdenEnRuta(),
                         distanciaDesdeOrigenKm: p.getDistanciaDesdeOrigen(),
-                        tiempoEsperaMin: p.getTiempoEsperaMin(),
-                        tarifaDesdeOrigen: p.getTarifaDesdeOrigen(),
+                        tiempoEsperaMin:        p.getTiempoEsperaMin(),
+                        tarifaDesdeOrigen:      p.getTarifaDesdeOrigen(),
                     })),
                 },
             },
             select: { codigoRuta: true, rutaID: true },
         })
-        return { codigoRuta: ruta.codigoRuta, rutaID: ruta.rutaID }
+        return { codigoRuta: result.codigoRuta, rutaID: result.rutaID }
     }
 
     async contarRutas(): Promise<number> {
         return prisma.ruta.count()
     }
 
-    async actualizarEstado(rutaID: string, estado: 'Activa' | 'Inactiva'): Promise<string> {
+    async actualizarEstado(rutaID: string, estado: EstadoRuta): Promise<string> {
         const ruta = await prisma.ruta.update({
             where: { rutaID },
-            data: { estado: mapEstadoRuta[estado] },
+            data: { estado: MAP_ESTADO[estado] },
             select: { codigoRuta: true },
         })
         return ruta.codigoRuta
     }
 
-    async actualizarRuta(rutaID: string, datos: Omit<DatosCompletos, 'usuarioID'>): Promise<void> {
+    // Actualiza una ruta existente con la instancia de dominio Ruta; reemplaza sus paradas
+    async actualizarRuta(rutaID: string, ruta: Ruta): Promise<void> {
         await prisma.ruta.update({
             where: { rutaID },
             data: {
-                codigoRuta: datos.codigoRuta.toUpperCase().trim(),
-                nombreRuta: datos.nombreRuta,
-                ciudadOrigen: datos.ciudadOrigen,
-                terminalOrigen: datos.terminalOrigen,
-                ciudadDestino: datos.ciudadDestino,
-                terminalDestino: datos.terminalDestino,
-                distanciaKm: datos.distanciaKm,
-                tiempoEstimadoHrs: datos.tiempoEstimadoHrs,
-                tipoRuta: mapTipoRuta[datos.tipoRuta],
-                tarifaBase: datos.tarifaBase,
+                codigoRuta:       ruta.getCodigoRuta().toUpperCase().trim(),
+                nombreRuta:       ruta.getNombreRuta(),
+                ciudadOrigen:     ruta.getCiudadOrigen(),
+                terminalOrigen:   ruta.getTerminalOrigen(),
+                ciudadDestino:    ruta.getCiudadDestino(),
+                terminalDestino:  ruta.getTerminalDestino(),
+                distanciaKm:      ruta.getDistanciaKm(),
+                tiempoEstimadoHrs: ruta.getTiempoEstimadoHrs(),
+                tipoRuta:         MAP_TIPO[ruta.getTipoRuta()],
+                tarifaBase:       ruta.getTarifaBase(),
                 paradas: {
                     deleteMany: {},
-                    create: datos.paradas.map(p => ({
-                        nombreParada: p.getNombreParada(),
-                        ciudad: p.getCiudad(),
-                        ordenEnRuta: p.getOrdenEnRuta(),
+                    create: ruta.getParadas().map(p => ({
+                        nombreParada:           p.getNombreParada(),
+                        ciudad:                 p.getCiudad(),
+                        ordenEnRuta:            p.getOrdenEnRuta(),
                         distanciaDesdeOrigenKm: p.getDistanciaDesdeOrigen(),
-                        tiempoEsperaMin: p.getTiempoEsperaMin(),
-                        tarifaDesdeOrigen: p.getTarifaDesdeOrigen(),
+                        tiempoEsperaMin:        p.getTiempoEsperaMin(),
+                        tarifaDesdeOrigen:      p.getTarifaDesdeOrigen(),
                     })),
                 },
             },

@@ -1,9 +1,10 @@
+import { Ruta, type TipoRuta } from '@/models/rutas/Ruta'
+import { LogAuditoria } from '@/models/rutas/LogAuditoria'
 import { ValidadorRuta } from './ValidadorRuta'
 import { GestorParadas } from './GestorParadas'
 import { APIMapas } from './APIMapas'
 import { AuditoriaService } from './AuditoriaService'
 import { RepositorioRutas } from '@/repositories/rutas/RepositorioRutas'
-import { LogAuditoria } from '@/models/rutas/LogAuditoria'
 import type { DatosParada } from './GestorParadas'
 
 export interface DatosCreacionRuta {
@@ -36,7 +37,7 @@ export class ControladorRutas {
     private auditoria = new AuditoriaService()
 
     async procesarCreacion(datosRuta: DatosCreacionRuta): Promise<ResultadoCreacion> {
-        // Pasos 8-13: validación en tres fases
+        // Pasos 8-13: validación en tres fases via ValidadorRuta
         const datosPlanos = datosRuta as unknown as Record<string, unknown>
         if (!this.validador.validarCamposObligatorios(datosPlanos)) {
             throw new Error('Completa todos los campos obligatorios.')
@@ -48,7 +49,7 @@ export class ControladorRutas {
             throw new Error('Distancia, tiempo y tarifa deben ser mayores a 0.')
         }
 
-        // Paso 14-16: calcular distancia/tiempo via API Mapas (condicional S2)
+        // Paso 14-16: calcular distancia/tiempo via APIMapas (condicional S2)
         const calculos = await this.apiMapas.calcularDistanciaYTiempo(
             datosRuta.ciudadOrigen,
             datosRuta.ciudadDestino,
@@ -59,24 +60,48 @@ export class ControladorRutas {
             datosRuta.tiempoEstimadoHrs = calculos.tiempoHoras
         }
 
-        // Paso 17-19: procesar paradas si tipo = ConParadas
+        // Paso 17-19: procesar paradas si tipo = ConParadas via GestorParadas → ParadaIntermedia
         const paradasProcesadas = datosRuta.tipoRuta === 'ConParadas' && datosRuta.paradas?.length
             ? this.gestorParadas.procesarParadas(datosRuta.paradas)
             : []
 
-        // Paso 15: verificar duplicado antes de guardar
+        // Paso 15: verificar duplicado en BD antes de crear la instancia
         const codigoDuplicado = await this.repositorio.verificarDuplicado(
             datosRuta.ciudadOrigen,
             datosRuta.ciudadDestino
         )
 
-        // Paso 20-21: guardar ruta
-        const { codigoRuta: codigoGenerado, rutaID } = await this.repositorio.guardarRuta({
-            ...datosRuta,
-            paradas: paradasProcesadas,
-        })
+        // D4: instanciar el modelo Ruta con los datos validados y calculados
+        const tipoRuta: TipoRuta = datosRuta.tipoRuta === 'ConParadas' ? 'ConParadas' : 'Directa'
+        const ruta = new Ruta(
+            crypto.randomUUID(),
+            datosRuta.codigoRuta,
+            datosRuta.nombreRuta,
+            datosRuta.ciudadOrigen,
+            datosRuta.terminalOrigen,
+            datosRuta.ciudadDestino,
+            datosRuta.terminalDestino,
+            datosRuta.distanciaKm,
+            datosRuta.tiempoEstimadoHrs,
+            tipoRuta,
+            datosRuta.tarifaBase,
+            datosRuta.estado === 'Activa' ? 'Activa' : 'Inactiva'
+        )
 
-        // Paso 22: registrar en LogAuditoria vía AuditoriaService (D8: service::auditoria)
+        // D4: agregarParada() valida e inserta cada parada en la lista ordenada del modelo
+        for (const p of paradasProcesadas) {
+            ruta.agregarParada(p)
+        }
+
+        // D4: validarDatos() verifica la integridad completa de la instancia antes de persistir
+        if (!ruta.validarDatos()) {
+            throw new Error('Datos de la ruta inválidos tras validación del modelo.')
+        }
+
+        // Paso 20-21: guardar la instancia Ruta via repositorio (usa getters del modelo)
+        const { codigoRuta: codigoGenerado, rutaID } = await this.repositorio.guardarRuta(ruta, datosRuta.usuarioID)
+
+        // Paso 22: instanciar LogAuditoria, llamar registrar() y persistir vía AuditoriaService
         const log = new LogAuditoria(
             crypto.randomUUID(),
             datosRuta.usuarioID,
@@ -99,7 +124,6 @@ export class ControladorRutas {
     }
 
     // D7: validación server-side de cada parada antes de agregarla a la lista
-    // distanciaTotal = 0 cuando aún no se ha calculado (paso 2 del wizard)
     async validarParada(
         parada: DatosParada,
         distanciaTotal: number,
@@ -121,11 +145,23 @@ export class ControladorRutas {
         return { valida: true, errorDetalle: null }
     }
 
+    // D4: fetch Ruta → activar()/desactivar() → persiste nuevo estado + LogAuditoria
+    // D4: fetch Ruta → activar()/desactivar() → persiste nuevo estado + LogAuditoria
     async toggleEstado(rutaID: string, estadoActual: 'Activa' | 'Inactiva', usuarioID: string): Promise<void> {
-        const nuevoEstado: 'Activa' | 'Inactiva' = estadoActual === 'Activa' ? 'Inactiva' : 'Activa'
-        const codigoRuta = await this.repositorio.actualizarEstado(rutaID, nuevoEstado)
-        const accion = nuevoEstado === 'Activa' ? 'ACTIVAR_RUTA' : 'DESACTIVAR_RUTA'
+        const ruta = await this.repositorio.findByID(rutaID)
+        if (!ruta) throw new Error('Ruta no encontrada')
+
+        if (ruta.getEstado() === 'Activa') {
+            ruta.desactivar()
+        } else {
+            ruta.activar()
+        }
+
+        const codigoRuta = await this.repositorio.actualizarEstado(rutaID, ruta.getEstado())
+        const accion = ruta.getEstado() === 'Activa' ? 'ACTIVAR_RUTA' : 'DESACTIVAR_RUTA'
         await this.auditoria.registrarEvento(usuarioID, accion, codigoRuta)
+
+        void estadoActual // el estado real proviene del modelo; este param queda por compatibilidad de firma
     }
 
     async procesarActualizacion(rutaID: string, datosRuta: DatosCreacionRuta): Promise<ResultadoCreacion> {
@@ -150,7 +186,32 @@ export class ControladorRutas {
             ? this.gestorParadas.procesarParadas(datosRuta.paradas)
             : []
 
-        await this.repositorio.actualizarRuta(rutaID, { ...datosRuta, paradas: paradasProcesadas })
+        // D4: instanciar Ruta con datos actualizados, agregar paradas, validar
+        const tipoRuta: TipoRuta = datosRuta.tipoRuta === 'ConParadas' ? 'ConParadas' : 'Directa'
+        const ruta = new Ruta(
+            rutaID,
+            datosRuta.codigoRuta,
+            datosRuta.nombreRuta,
+            datosRuta.ciudadOrigen,
+            datosRuta.terminalOrigen,
+            datosRuta.ciudadDestino,
+            datosRuta.terminalDestino,
+            datosRuta.distanciaKm,
+            datosRuta.tiempoEstimadoHrs,
+            tipoRuta,
+            datosRuta.tarifaBase,
+            'Activa'
+        )
+
+        for (const p of paradasProcesadas) {
+            ruta.agregarParada(p)
+        }
+
+        if (!ruta.validarDatos()) {
+            throw new Error('Datos de la ruta inválidos tras validación del modelo.')
+        }
+
+        await this.repositorio.actualizarRuta(rutaID, ruta)
 
         return {
             codigoGenerado: datosRuta.codigoRuta,

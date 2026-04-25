@@ -20,11 +20,11 @@ export class RepositorioHorarios {
         return this.horarios.guardarLog(usuarioID, accion, detalles)
     }
 
-    findByRuta(rutaID: string): Horario[] {
+    async findByRuta(rutaID: string): Promise<Horario[]> {
         return this.horarios.findByRuta(rutaID)
     }
 
-    findConflictos(fecha: Date, hora: Date): Horario[] {
+    async findConflictos(fecha: Date, hora: Date): Promise<Horario[]> {
         return this.horarios.findConflictos(fecha, hora)
     }
 

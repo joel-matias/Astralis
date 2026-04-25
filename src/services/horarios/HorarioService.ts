@@ -1,9 +1,10 @@
 // D5 CU3 — Orquesta el caso de uso completo Programar Horario de Viaje
+import { prisma } from '@/lib/prisma'
 import { Horario } from '@/models/horarios/Horario'
 import type { HorarioDTO } from '@/models/horarios/HorarioDTO'
 import type { Autobus } from '@/models/horarios/Autobus'
 import type { Conductor } from '@/models/horarios/Conductor'
-import type { Ruta } from '@/models/horarios/Ruta'
+import { Ruta, type EstadoRuta } from '@/models/horarios/Ruta'
 import { NotificacionService } from './NotificacionService'
 import { ValidadorRecursos } from './ValidadorRecursos'
 import { RepositorioHorarios } from '@/repositories/horarios/RepositorioHorarios'
@@ -13,7 +14,29 @@ export class HorarioService {
     private validador = new ValidadorRecursos()
     private repositorio = new RepositorioHorarios()
 
-    programarHorario(datos: HorarioDTO): Horario {
+    // D7 paso 4.1: obtiene instancia de Ruta desde BD para consultar tarifaBase y tiempoEstimadoHrs
+    private async obtenerRuta(rutaID: string): Promise<Ruta> {
+        const data = await prisma.ruta.findUnique({
+            where: { rutaID },
+            select: {
+                rutaID: true, codigoRuta: true, ciudadOrigen: true, ciudadDestino: true,
+                distanciaKm: true, tiempoEstimadoHrs: true, tarifaBase: true, estado: true,
+            },
+        })
+        if (!data) throw new Error('Ruta no encontrada')
+        return new Ruta(
+            data.rutaID,
+            data.codigoRuta,
+            data.ciudadOrigen,
+            data.ciudadDestino,
+            Number(data.distanciaKm),
+            Number(data.tiempoEstimadoHrs),
+            Number(data.tarifaBase),
+            (data.estado === 'ACTIVA' ? 'Activa' : 'Inactiva') as EstadoRuta
+        )
+    }
+
+    programarHorario(datos: HorarioDTO, precioBase: number): Horario {
         return new Horario(
             crypto.randomUUID(),
             datos.rutaID,
@@ -23,7 +46,7 @@ export class HorarioService {
             datos.horaSalida,
             datos.frecuencia,
             datos.vigencia,
-            datos.precioBase ?? 0,
+            precioBase,
             datos.estado ?? 'Activo'
         )
     }
@@ -36,9 +59,11 @@ export class HorarioService {
         )
     }
 
-    // D6: delega la verificación de disponibilidad a ValidadorRecursos
-    verificarDisponibilidadRecursos(autobusID: string, conductorID: string, fecha: Date, hora: Date): boolean {
-        return this.validador.validarDisponibilidadRecursos(autobusID, conductorID, fecha, hora)
+    // D6: delega en ValidadorRecursos que instancia los objetos de dominio y llama sus métodos
+    async verificarDisponibilidadRecursos(
+        autobusID: string, conductorID: string, fecha: Date, hora: Date, duracionHrs: number
+    ): Promise<boolean> {
+        return this.validador.validarDisponibilidadRecursos(autobusID, conductorID, fecha, hora, duracionHrs)
     }
 
     verificarConflictoHorario(fecha: Date, hora: Date): boolean {
@@ -47,7 +72,7 @@ export class HorarioService {
         return false
     }
 
-    // D6: usa tarifaBase de la ruta; el repositorio provee la instancia de Ruta
+    // D6: delega el cálculo al modelo Ruta vía getTarifaBase()
     calcularPrecioViaje(ruta: Ruta): number {
         return ruta.getTarifaBase()
     }
@@ -60,17 +85,21 @@ export class HorarioService {
         await this.repositorio.guardarLog(usuarioID, accion, detalles)
     }
 
-    // D7: orquesta el flujo completo — valida → programa → persiste → notifica → registra
+    // D7: flujo completo — obtiene Ruta → valida recursos → calcula precio → programa → persiste → notifica → registra
     async solicitarProgramacion(datos: HorarioDTO): Promise<string> {
-        const disponible = this.verificarDisponibilidadRecursos(
+        const ruta = await this.obtenerRuta(datos.rutaID)
+
+        const disponible = await this.verificarDisponibilidadRecursos(
             datos.autobusID,
             datos.conductorID,
             datos.fechaInicio,
-            datos.horaSalida
+            datos.horaSalida,
+            ruta.getTiempoEstimadoHrs()
         )
         if (!disponible) throw new Error('E1: recursos no disponibles')
 
-        const horario = this.programarHorario(datos)
+        const precioBase = this.calcularPrecioViaje(ruta)
+        const horario = this.programarHorario(datos, precioBase)
         const horarioID = await this.repositorio.save(horario, datos.programadoPorID, datos.fechaFin)
         this.notificarConductor(datos.conductorID, horario)
         await this.registrarEnLog(datos.programadoPorID, 'CREAR_HORARIO', `Horario programado: ${horarioID}`)

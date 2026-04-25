@@ -351,7 +351,7 @@ test.describe('CU2 — Administración de Rutas', () => {
     // --- Detail and edit ---
 
     test('ver detalle muestra datos correctos de la ruta', async ({ page }) => {
-        await page.goto('/admin/rutas')
+        await page.goto(`/admin/rutas?q=${CODIGO_BASE}`)
         const fila = page.locator('tr', { has: page.getByText(CODIGO_BASE) })
         await fila.getByTitle('Ver detalle').click()
         await expect(page).toHaveURL(/\/admin\/rutas\/.+$/, { timeout: 8_000 })
@@ -386,10 +386,11 @@ test.describe('CU2 — Administración de Rutas', () => {
         if (!ruta) throw new Error(`Ruta ${CODIGO_BASE} no encontrada`)
         await prisma.ruta.update({ where: { rutaID: ruta.rutaID }, data: { estado: EstadoRuta.INACTIVA } })
 
-        await page.goto('/admin/rutas')
+        await page.goto(`/admin/rutas?q=${CODIGO_BASE}`)
         const fila = page.locator('tr', { has: page.getByText(CODIGO_BASE) })
         await fila.getByTitle('Activar').click()
         await expect(fila.getByTitle('Desactivar')).toBeVisible({ timeout: 8_000 })
+        await page.waitForLoadState('networkidle')
 
         const actualizada = await prisma.ruta.findFirst({ where: { rutaID: ruta.rutaID } })
         expect(actualizada?.estado).toBe(EstadoRuta.ACTIVA)
@@ -407,10 +408,11 @@ test.describe('CU2 — Administración de Rutas', () => {
         if (!ruta) throw new Error(`Ruta ${CODIGO_DUP} no encontrada`)
         await prisma.ruta.update({ where: { rutaID: ruta.rutaID }, data: { estado: EstadoRuta.ACTIVA } })
 
-        await page.goto('/admin/rutas')
+        await page.goto(`/admin/rutas?q=${CODIGO_DUP}`)
         const fila = page.locator('tr', { has: page.getByText(CODIGO_DUP) })
         await fila.getByTitle('Desactivar').click()
         await expect(fila.getByTitle('Activar')).toBeVisible({ timeout: 8_000 })
+        await page.waitForLoadState('networkidle')
 
         const actualizada = await prisma.ruta.findFirst({ where: { rutaID: ruta.rutaID } })
         expect(actualizada?.estado).toBe(EstadoRuta.INACTIVA)

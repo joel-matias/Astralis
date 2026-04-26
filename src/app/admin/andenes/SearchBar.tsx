@@ -7,9 +7,10 @@ import { EstadoAnden } from '@prisma/client'
 interface Props {
     defaultQ: string
     defaultEstado: string
+    defaultHorario: string
 }
 
-export function SearchBar({ defaultQ, defaultEstado }: Props) {
+export function SearchBar({ defaultQ, defaultEstado, defaultHorario }: Props) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -55,6 +56,21 @@ export function SearchBar({ defaultQ, defaultEstado }: Props) {
                     <option value={EstadoAnden.DISPONIBLE}>Disponible</option>
                     <option value={EstadoAnden.OCUPADO}>Ocupado</option>
                     <option value={EstadoAnden.RESERVADO}>Reservado</option>
+                    <option value={EstadoAnden.MANTENIMIENTO}>Mantenimiento</option>
+                </select>
+            </div>
+            {/* filtrado por horario */}
+            <div className="md:col-span-3">
+                <select
+                    defaultValue={defaultHorario}
+                    onChange={(e) => update('horario', e.target.value)}
+                    className="w-full px-4 py-3 bg-surface-container-high rounded-xl border-0 focus:ring-2 focus:ring-primary/30 focus:bg-surface-container-lowest transition-all text-on-surface text-sm"
+                >
+                    <option value="all">Todos los horarios</option>
+                    <option value="mañana">Mañana</option>
+                    <option value="tarde">Tarde</option>
+                    <option value="noche">Noche</option>
+                    <option value="24/7">24 Horas</option>
                 </select>
             </div>
         </div>

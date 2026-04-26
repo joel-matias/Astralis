@@ -5,22 +5,23 @@ import Link from 'next/link'
 import { EstadoAnden } from '@prisma/client'
 import { Suspense } from 'react'
 import { SearchBar } from './SearchBar'
+import { getEtiquetaHorario, getHorarioWhere } from '@/lib/andenes/horarioUtils'
 
 const PAGE_SIZE = 10
 
 interface PageProps {
-    searchParams: Promise<{ q: string; estado?: string; page?: string }> 
+    searchParams: Promise<{ q: string; estado?: string; horario?: string; page?: string }>
 }
 export default async function AndenesPage({ searchParams }: PageProps) {
-    const { q = '', estado = 'all', page = '1' } = await searchParams
+    const { q = '', estado = 'all', horario = 'all', page = '1' } = await searchParams
     const currentPage = Math.max(1, parseInt(page) || 1)
 
     const where = {
-        ...(q && !isNaN(parseInt(q)) && {
-            numero: parseInt(q)
-        }),
+        ...(q && !isNaN(parseInt(q)) && { numero: parseInt(q) }),
         ...(estado !== 'all' && { estado: estado as EstadoAnden }),
+        ...getHorarioWhere(horario),
     }
+
 
     const [andenes, total] = await Promise.all([
         prisma.anden.findMany({
@@ -28,7 +29,21 @@ export default async function AndenesPage({ searchParams }: PageProps) {
             orderBy: { numero: 'asc' },
             skip: (currentPage - 1) * PAGE_SIZE,
             take: PAGE_SIZE,
-            include: { asignaciones: true },
+            include: {
+                asignaciones: {
+                    where: { cancelada: false, estado: { in: ['RESERVADO', 'OCUPADO'] } },
+                    orderBy: { fechaHora: 'desc' },
+                    include: {
+                        horario: {
+                            select: {
+                                autobus: {
+                                    select: { numeroEconomico: true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }),
         prisma.anden.count({ where }),
     ])
@@ -48,6 +63,13 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                     </p>
                 </div>
                 <Link
+                    href="/admin/andenes/asignar"
+                    className="bg-linear-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95 w-fit"
+                >
+                    <span className="material-symbols-outlined">add_circle</span>
+                    Asignar Anden
+                </Link>
+                <Link
                     href="/admin/andenes/nueva"
                     className="bg-linear-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95 w-fit"
                 >
@@ -59,7 +81,7 @@ export default async function AndenesPage({ searchParams }: PageProps) {
             {/* SearchBar */}
             <section className="bg-surface-container-lowest rounded-xl p-6 mb-8 shadow-[0_0_40px_rgba(20,27,44,0.04)]">
                 <Suspense fallback={<div className="h-16 bg-surface-container-high rounded-xl animate-pulse"></div>}>
-                    <SearchBar defaultQ={q} defaultEstado={estado} />
+                    <SearchBar defaultQ={q} defaultEstado={estado} defaultHorario={horario} />
                 </Suspense>
             </section>
 
@@ -71,6 +93,7 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-secondary">Número</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-secondary">Capacidad</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-secondary">Estado</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-secondary">Autobuses Asignados</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-secondary">Horario</th>
                             <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-secondary">Acciones</th>
                         </tr>
@@ -81,21 +104,29 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                                 <td className="px-6 py-4 text-sm text-on-surface font-medium">#{anden.numero}</td>
                                 <td className="px-6 py-4 text-sm text-on-surface">{anden.capacidad} buses</td>
                                 <td className="px-6 py-4 text-sm">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                        anden.estado === 'DISPONIBLE' ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900'
-                                    }`}>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${anden.estado === 'DISPONIBLE' ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900'
+                                        }`}>
                                         {anden.estado}
                                     </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-on-surface">
+                                    {anden.asignaciones.length === 0
+                                        ? '-'
+                                        : anden.asignaciones
+                                            .map(a => a.horario?.autobus?.numeroEconomico)
+                                            .filter(Boolean)
+                                            .join(', ')
+                                    }
                                 </td>
                                 <td className="px-6 py-4 text-sm text-on-surface">{anden.horarioDisponible || '-'}</td>
                                 <td className="px-6 py-4 text-sm flex gap-2">
                                     <Link href={`/admin/andenes/${anden.andenID}`} className="text-secondary hover:text-primary transition-colors p-1"
-                                                title="Ver detalle">
-                                                <span className="material-symbols-outlined">visibility</span>
-                                            </Link>
+                                        title="Ver detalle">
+                                        <span className="material-symbols-outlined">visibility</span>
+                                    </Link>
                                     <Link href={`/admin/andenes/${anden.andenID}/editar`} className="text-secondary hover:text-primary transition-colors p-1"
-                                                title="Editar">
-                                                <span className="material-symbols-outlined">edit</span></Link>
+                                        title="Editar">
+                                        <span className="material-symbols-outlined">edit</span></Link>
                                 </td>
                             </tr>
                         ))}
@@ -108,7 +139,7 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                             </tr>
                         )}
                     </tbody>
-                    
+
                 </table>
             </div>
 
@@ -118,7 +149,7 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                     <div className="flex gap-2">
                         {currentPage > 1 && (
                             <Link
-                                href={`?${new URLSearchParams({ q, estado, page: (currentPage - 1).toString() }).toString()}`}
+                                href={`?${new URLSearchParams({ q, estado, horario, page: (currentPage - 1).toString() }).toString()}`}
                                 className="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-lowest transition-colors"
                             >
                                 Anterior
@@ -129,12 +160,11 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                             return (
                                 <Link
                                     key={pageNum}
-                                    href={`?${new URLSearchParams({ q, estado, page: pageNum.toString() }).toString()}`}
-                                    className={`px-4 py-2 rounded-lg transition-colors ${
-                                        pageNum === currentPage
-                                            ? 'bg-primary text-on-primary'
-                                            : 'bg-surface-container-high text-on-surface hover:bg-surface-container-lowest'
-                                    }`}
+                                    href={`?${new URLSearchParams({ q, estado, horario, page: pageNum.toString() }).toString()}`}
+                                    className={`px-4 py-2 rounded-lg transition-colors ${pageNum === currentPage
+                                        ? 'bg-primary text-on-primary'
+                                        : 'bg-surface-container-high text-on-surface hover:bg-surface-container-lowest'
+                                        }`}
                                 >
                                     {pageNum}
                                 </Link>
@@ -142,7 +172,7 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                         })}
                         {currentPage < totalPages && (
                             <Link
-                                href={`?${new URLSearchParams({ q, estado, page: (currentPage + 1).toString() }).toString()}`}
+                                href={`?${new URLSearchParams({ q, estado, horario, page: (currentPage + 1).toString() }).toString()}`}
                                 className="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-lowest transition-colors"
                             >
                                 Siguiente

@@ -32,19 +32,31 @@ export default function PasoProcesandoPago({ datos, rechazado, onPagoExitoso, on
 
     async function procesarPago(e: React.FormEvent) {
         e.preventDefault()
-        if (!nombre.trim()) return
+        if (!nombre.trim() || !datos.viaje) return
         setProcesando(true)
 
-        // Simulación de procesamiento (stub — real en ProcesadorPago service)
-        await new Promise(r => setTimeout(r, 1500))
-
-        setProcesando(false)
-        onPagoExitoso(
-            { nombre, email },
-            metodoPago,
-            parseFloat(montoRecibido || String(total)),
-            `TXN-${Date.now()}`
-        )
+        try {
+            const resultado = await procesarVentaAction({
+                horarioID: datos.viaje.id,
+                clienteNombre: nombre.trim(),
+                clienteEmail: email.trim() || undefined,
+                asientos: datos.asientos,
+                precioUnitario: datos.viaje.precio,
+                metodoPago,
+                montoRecibido: parseFloat(montoRecibido || String(total)),
+            })
+            onPagoExitoso(
+                { nombre: nombre.trim(), email: email.trim() },
+                metodoPago,
+                parseFloat(montoRecibido || String(total)),
+                resultado.transaccionId,
+                resultado.boletos
+            )
+        } catch {
+            onPagoRechazado()
+        } finally {
+            setProcesando(false)
+        }
     }
 
     return (
@@ -118,11 +130,10 @@ export default function PasoProcesandoPago({ datos, rechazado, onPagoExitoso, on
                                 key={metodo}
                                 type="button"
                                 onClick={() => setMetodoPago(metodo)}
-                                className={`p-4 rounded-xl border-2 text-left transition-all ${
-                                    metodoPago === metodo
+                                className={`p-4 rounded-xl border-2 text-left transition-all ${metodoPago === metodo
                                         ? 'border-primary bg-primary/5'
                                         : 'border-outline-variant hover:border-primary/40'
-                                }`}
+                                    }`}
                             >
                                 <span className={`material-symbols-outlined block mb-1 text-2xl ${metodoPago === metodo ? 'text-primary' : 'text-secondary'}`}
                                     style={metodoPago === metodo ? { fontVariationSettings: "'FILL' 1" } : undefined}>
@@ -177,7 +188,7 @@ export default function PasoProcesandoPago({ datos, rechazado, onPagoExitoso, on
                     <button
                         type="submit"
                         disabled={procesando || montoInsuficiente}
-                        className="bg-primary text-on-primary font-bold px-8 py-3 rounded-xl flex items-center gap-2 hover:bg-primary-container transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed min-w-[160px] justify-center"
+                        className="bg-primary text-on-primary font-bold px-8 py-3 rounded-xl flex items-center gap-2 hover:bg-primary-container transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed min-w-40 justify-center"
                     >
                         {procesando ? (
                             <>

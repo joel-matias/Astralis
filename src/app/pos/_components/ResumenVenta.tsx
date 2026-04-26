@@ -65,8 +65,8 @@ export default function ResumenVenta({ datos, estado, onConfirmarPago }: Props) 
                         <p className="text-xs text-secondary font-medium uppercase tracking-wide mb-2">Asientos</p>
                         <div className="flex flex-wrap gap-2">
                             {asientos.map(a => (
-                                <span key={a} className="bg-primary text-on-primary text-sm font-bold px-3 py-1 rounded-lg">
-                                    {a}
+                                <span key={a.asientoID} className="bg-primary text-on-primary text-sm font-bold px-3 py-1 rounded-lg">
+                                    {a.numero}
                                 </span>
                             ))}
                         </div>

@@ -42,8 +42,8 @@ export default function PasoVentaFinalizada({ datos, onNuevaVenta }: Props) {
                     <div>
                         <p className="text-xs text-secondary uppercase tracking-wide font-medium mb-0.5">Asientos</p>
                         <div className="flex gap-1 flex-wrap">
-                            {asientos.sort().map(a => (
-                                <span key={a} className="bg-primary text-on-primary text-xs font-bold px-2 py-0.5 rounded">{a}</span>
+                            {[...asientos].sort((a, b) => a.numero.localeCompare(b.numero)).map(a => (
+                                <span key={a.asientoID} className="bg-primary text-on-primary text-xs font-bold px-2 py-0.5 rounded">{a.numero}</span>
                             ))}
                         </div>
                     </div>

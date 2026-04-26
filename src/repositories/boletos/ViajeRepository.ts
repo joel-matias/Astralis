@@ -40,8 +40,8 @@ export class ViajeRepository {
                 ],
             },
             include: {
-                ruta:    { select: { ciudadOrigen: true, ciudadDestino: true, tipoServicio: true, tarifaBase: true } },
-                autobus: { select: { capacidadAsientos: true } },
+                ruta:    { select: { ciudadOrigen: true, ciudadDestino: true, tarifaBase: true } },
+                autobus: { select: { capacidadAsientos: true, tipoServicio: true } },
                 _count:  { select: { boletos: { where: { estado: { not: 'CANCELADO' } } } } },
             },
         })
@@ -57,7 +57,7 @@ export class ViajeRepository {
                 destino:       h.ruta.ciudadDestino,
                 fecha:         fechaStr,
                 hora:          formatHora(h.horaSalida),
-                tipoServicio:  TIPO_SERVICIO[h.ruta.tipoServicio] ?? h.ruta.tipoServicio,
+                tipoServicio:  TIPO_SERVICIO[h.autobus.tipoServicio] ?? h.autobus.tipoServicio,
                 precio:        Number(h.ruta.tarifaBase),
                 asientosLibres: h.autobus.capacidadAsientos - h._count.boletos,
             }))

@@ -1,5 +1,7 @@
+// D1, D4, D5, D2 — ValidadorDatos: valida campos, formatos e identifica duplicados
 export class ValidadorDatos {
 
+    // D4, D5 — verifica que todos los campos en el mapa tengan valor no vacío
     validarCamposObligatorios(datos: Map<string, unknown>): boolean {
         for (const [, valor] of datos) {
             if (valor === null || valor === undefined || String(valor).trim() === '') {
@@ -9,6 +11,7 @@ export class ValidadorDatos {
         return datos.size > 0
     }
 
+    // D4, D5 — valida formatos: placas (alfanumérico 5-10), VIN (17 chars), año (rango válido)
     validarFormatos(datos: Map<string, unknown>): boolean {
         if (datos.has('placas')) {
             const placas = String(datos.get('placas'))
@@ -26,13 +29,16 @@ export class ValidadorDatos {
             const curp = String(datos.get('CURP'))
             if (!/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curp)) return false
         }
+        if (datos.has('capacidadAsientos')) {
+            const cap = Number(datos.get('capacidadAsientos'))
+            if (cap <= 8) return false
+        }
         return true
     }
 
-    // Retorna true si el valor ya está duplicado (es un conflicto)
-    // Implementación real: BaseDatos.verificarDuplicado(campo, value, coleccion)
-    verificarDuplicidad(campo: string, value: string, coleccion: string): boolean {
-        void campo; void value; void coleccion
+    // D4, D5 — retorna true si el valor ya existe (conflicto de duplicidad); implementación real: BaseDatos
+    verificarDuplicidad(campo: string, valor: string): boolean {
+        void campo; void valor
         return false
     }
 }

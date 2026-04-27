@@ -54,7 +54,8 @@ export async function actualizarAnden(andenID: string, data: AndenFormData) {
 
 export async function asignarAnden(
     horarioID: string,
-    andenID: string
+    andenID: string,
+    asignacionID?: string
 ): Promise<{ error: string } | void> {
     const session = await auth()
     if (!session?.user?.id) return { error: 'Sesión no válida.' }
@@ -92,26 +93,69 @@ export async function asignarAnden(
             ? 'OCUPADO'
             : 'DISPONIBLE'
 
+        let andenAnteriorID: string | null = null
+        if (asignacionID) {
+            const asignacionAnterior = await prisma.asignacionAnden.findUnique({
+                where: { asignacionID },
+                select: { andenID: true }
+            })
+            andenAnteriorID = asignacionAnterior?.andenID ?? null
+        }
+        let estadoAndenAnterior: 'DISPONIBLE' | 'OCUPADO' = 'DISPONIBLE'
+if (andenAnteriorID) {
+    const anden = await prisma.anden.findUnique({
+        where: { andenID: andenAnteriorID },
+        select: { capacidad: true }
+    })
+    // Resta 1 porque esta asignación se va a cancelar
+    const asignacionesRestantes = await prisma.asignacionAnden.count({
+        where: {
+            andenID: andenAnteriorID,
+            cancelada: false,
+            estado: { in: ['RESERVADO', 'OCUPADO'] },
+            asignacionID: { not: asignacionID }  // excluye la que vamos a cancelar
+        }
+    })
+    estadoAndenAnterior = asignacionesRestantes >= (anden?.capacidad ?? 1)
+        ? 'OCUPADO'
+        : 'DISPONIBLE'
+}
         await prisma.$transaction([
+            // Si es modificación, cancela la asignación anterior
+            ...(asignacionID ? [
+                prisma.asignacionAnden.update({
+                    where: { asignacionID },
+                    data: { cancelada: true, estado: 'LIBERADO' }
+                })
+            ] : []),
+
+            // Si hay andén anterior, recalcula su estado
+            ...(andenAnteriorID ? [
+                prisma.anden.update({
+                    where: { andenID: andenAnteriorID },
+                    data: { estado: estadoAndenAnterior }
+                })
+            ] : []),
+
+            // Nueva asignación
             prisma.asignacionAnden.create({
-                data: {
-                    andenID,
-                    horarioID,
-                    supervisorID: session.user.id,
-                    estado: 'RESERVADO',
-                }
+                data: { andenID, horarioID, supervisorID: session.user.id, estado: 'RESERVADO' }
             }),
+
+            // Actualizar estado nuevo andén
             prisma.anden.update({
                 where: { andenID },
-                data: { estado: nuevoEstado }  // ← ya no hardcodeado
+                data: { estado: nuevoEstado }
             }),
+
+            // Log
             prisma.logAuditoria.create({
                 data: {
                     usuarioID: session.user.id,
-                    accion: 'anden:asignar',
+                    accion: asignacionID ? 'anden:modificar' : 'anden:asignar',
                     modulo: 'andenes',
                     resultado: 'Exito',
-                    detalles: `Andén asignado al horario ${horarioID}`,
+                    detalles: `Andén ${asignacionID ? 'modificado' : 'asignado'} al horario ${horarioID}`,
                 }
             })
         ])

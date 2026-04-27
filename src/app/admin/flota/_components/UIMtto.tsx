@@ -87,7 +87,7 @@ export function UIMtto({ autobusID, numeroEconomico, mantenimientoAbierto, onCam
                     <p className="text-on-surface text-sm">{mantenimientoAbierto.descripcionActividad}</p>
                     <p className="text-secondary text-xs mt-1">Responsable: {mantenimientoAbierto.responsable}</p>
                     <p className="text-secondary text-xs">
-                        Inicio: {new Date(mantenimientoAbierto.fechaInicio).toLocaleDateString('es-MX')}
+                        Inicio: {new Date(mantenimientoAbierto.fechaInicio).toLocaleDateString('es-MX', { timeZone: 'UTC' })}
                     </p>
                 </div>
 

@@ -27,6 +27,8 @@ export default async function AsignarAndenPage() {
         orderBy: { horaSalida: 'asc' }
     })
 
+    const horariosSerialized = horarios.map(h => ({ ...h, precioBase: Number(h.precioBase) }))
+
     // Andenes disponibles (flujo normal paso 4)
     const andenes = await prisma.anden.findMany({
         where: { estado: 'DISPONIBLE' },
@@ -54,7 +56,7 @@ export default async function AsignarAndenPage() {
             </header>
 
             <AsignarForm
-                horarios={horarios}
+                horarios={horariosSerialized}
                 andenes={andenes}
                 action={asignarAnden}
             />

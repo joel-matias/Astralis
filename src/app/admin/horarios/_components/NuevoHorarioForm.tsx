@@ -3,6 +3,11 @@
 import { useState } from 'react'
 import { crearHorario } from '../actions'
 
+function fechaLocal(): string {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 interface Ruta {
     rutaID: string
     codigoRuta: string
@@ -114,7 +119,7 @@ export function NuevoHorarioForm({ rutas, autobuses, conductores }: Props) {
                             <option value="">Selecciona un conductor activo…</option>
                             {conductores.map(c => (
                                 <option key={c.conductorID} value={c.conductorID}>
-                                    {c.nombreCompleto} — licencia vigente hasta {new Date(c.vigenciaLicencia).toLocaleDateString('es-MX')}
+                                    {c.nombreCompleto} — licencia vigente hasta {new Date(c.vigenciaLicencia).toLocaleDateString('es-MX', { timeZone: 'UTC' })}
                                 </option>
                             ))}
                         </select>
@@ -136,7 +141,7 @@ export function NuevoHorarioForm({ rutas, autobuses, conductores }: Props) {
                             type="date"
                             name="fechaInicio"
                             required
-                            min={new Date().toISOString().split('T')[0]}
+                            min={fechaLocal()}
                             className="w-full bg-surface-container-high rounded-xl px-4 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                     </div>
@@ -189,7 +194,7 @@ export function NuevoHorarioForm({ rutas, autobuses, conductores }: Props) {
                                 type="date"
                                 name="fechaFin"
                                 required
-                                min={new Date().toISOString().split('T')[0]}
+                                min={fechaLocal()}
                                 className="w-full bg-surface-container-high rounded-xl px-4 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
                             />
                         </div>

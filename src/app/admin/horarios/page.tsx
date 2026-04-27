@@ -146,7 +146,7 @@ export default async function HorariosPage({ searchParams }: PageProps) {
                                         {h.conductor.nombreCompleto}
                                     </td>
                                     <td className={`px-6 py-5 text-sm text-on-surface-variant ${!activo ? 'opacity-60' : ''}`}>
-                                        {h.fechaInicio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        {h.fechaInicio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
                                     </td>
                                     <td className={`px-6 py-5 font-mono text-sm font-semibold text-on-surface ${!activo ? 'opacity-60' : ''}`}>
                                         {new Date(h.horaSalida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })}

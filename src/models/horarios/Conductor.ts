@@ -57,7 +57,7 @@ export class Conductor {
     // D4: recibe duración a agregar para verificar si excedería el límite antes de asignar
     // Nombre del diagrama: excededHoras (mezcla español/inglés — ver correcciones D4)
     excededHoras(duracion: number): boolean {
-        return this.horasAcumuladas + duracion >= LIMITE_HORAS_JORNADA
+        return this.horasAcumuladas + duracion > LIMITE_HORAS_JORNADA
     }
 
     // D4: reemplaza asignar() de D2 con firma explícita; cambia estado a NoDisponible al ser asignado

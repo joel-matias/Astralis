@@ -11,8 +11,6 @@ const buscador    = new BuscadorViajes()
 const mapaService = new MapaAsientos()
 const gestorVentas = new GestorVentas()
 
-export type { ViajeData, AsientoData }
-
 export async function buscarViajesAction(
     origen: string,
     destino: string,

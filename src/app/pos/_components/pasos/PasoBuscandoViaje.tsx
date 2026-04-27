@@ -1,10 +1,15 @@
 'use client'
 
 // D6 CU4 — Estado BuscandoViaje; formulario de búsqueda con datos reales de BD
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import type { ViajeSeleccionado } from '../VentaWizard'
 import { buscarViajesAction, obtenerDestinosAction } from '../../actions'
-import type { ViajeData } from '../../actions'
+import type { ViajeData } from '@/repositories/boletos/ViajeRepository'
+
+function fechaLocal(): string {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 const SERVICIO_COLOR: Record<string, string> = {
     Ejecutivo: 'bg-primary/10 text-primary',
@@ -21,7 +26,7 @@ export default function PasoBuscandoViaje({ origenes, onViajeSeleccionado }: Pro
     const [origen, setOrigen]   = useState(origenes[0] ?? '')
     const [destinos, setDestinos] = useState<string[]>([])
     const [destino, setDestino] = useState('')
-    const [fecha, setFecha]     = useState(() => new Date().toISOString().split('T')[0])
+    const [fecha, setFecha]     = useState(() => fechaLocal())
     const [pax, setPax]         = useState(1)
     const [viajes, setViajes]   = useState<ViajeData[]>([])
     const [buscado, setBuscado] = useState(false)
@@ -29,7 +34,7 @@ export default function PasoBuscandoViaje({ origenes, onViajeSeleccionado }: Pro
     const [isPendingDestinos, startDestinos] = useTransition()
     const [isPendingBuscar, startBuscar]     = useTransition()
 
-    const hoy = new Date().toISOString().split('T')[0]
+    const hoy = fechaLocal()
     const fechaValida = fecha >= hoy
 
     function cambiarOrigen(nuevoOrigen: string) {
@@ -55,14 +60,15 @@ export default function PasoBuscandoViaje({ origenes, onViajeSeleccionado }: Pro
     }
 
     // Carga los destinos del primer origen al montar
-    useState(() => {
+    useEffect(() => {
         if (origenes[0]) {
-            obtenerDestinosAction(origenes[0]).then(ds => {
+            startDestinos(async () => {
+                const ds = await obtenerDestinosAction(origenes[0])
                 setDestinos(ds)
                 setDestino(ds[0] ?? '')
             })
         }
-    })
+    }, [])
 
     return (
         <div className="p-8 max-w-3xl">

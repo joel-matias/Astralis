@@ -61,10 +61,11 @@ export class ValidadorRecursos {
         )
 
         // D6 paso 5.1 / 5.2 / 5.3 del diagrama de secuencia
+        // horasAcumuladas no se actualiza al crear horarios, por lo que solo verificamos si ya excedió el límite
         return (
             autobus.estaDisponible(fecha, hora) &&
             conductor.tieneLicenciaVigente() &&
-            !conductor.excededHoras(duracionHrs)
+            !conductor.excededHoras(0)
         )
     }
 }

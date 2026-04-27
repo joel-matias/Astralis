@@ -1,6 +1,6 @@
 // D5 CU4 — consulta Horario+Ruta proyectados como Viaje para el POS
 import { prisma } from '@/lib/prisma'
-import { EstadoHorario, EstadoRuta } from '@prisma/client'
+import { EstadoHorario, EstadoRuta, FrecuenciaHorario } from '@prisma/client'
 
 export interface ViajeData {
     horarioID: string
@@ -23,21 +23,17 @@ const TIPO_SERVICIO: Record<string, string> = { ECONOMICO: 'Económico', EJECUTI
 export class ViajeRepository {
 
     async buscarViajes(origen: string, destino: string, fecha: Date, minAsientos: number): Promise<ViajeData[]> {
-        const inicio = new Date(fecha); inicio.setHours(0, 0, 0, 0)
-        const fin    = new Date(fecha); fin.setHours(23, 59, 59, 999)
+        const inicio = new Date(fecha); inicio.setUTCHours(0, 0, 0, 0)
+        const fin    = new Date(fecha); fin.setUTCHours(23, 59, 59, 999)
+        const diaUTC = inicio.getUTCDay()
 
-        const horarios = await prisma.horario.findMany({
+        // Trae todos los activos de la ruta cuyo inicio ya llegó y cuya vigencia no expiró
+        const candidatos = await prisma.horario.findMany({
             where: {
-                estado: EstadoHorario.ACTIVO,
-                ruta: { ciudadOrigen: origen, ciudadDestino: destino, estado: EstadoRuta.ACTIVA },
-                OR: [
-                    { frecuencia: 'UNICO',   fechaInicio: { gte: inicio, lte: fin } },
-                    {
-                        frecuencia: { in: ['DIARIO', 'SEMANAL'] },
-                        fechaInicio: { lte: fin },
-                        OR: [{ fechaFin: null }, { fechaFin: { gte: inicio } }],
-                    },
-                ],
+                estado:  EstadoHorario.ACTIVO,
+                ruta:    { ciudadOrigen: origen, ciudadDestino: destino, estado: EstadoRuta.ACTIVA },
+                fechaInicio: { lte: fin },
+                OR: [{ fechaFin: null }, { fechaFin: { gte: inicio } }],
             },
             include: {
                 ruta:    { select: { ciudadOrigen: true, ciudadDestino: true, tarifaBase: true } },
@@ -46,19 +42,23 @@ export class ViajeRepository {
             },
         })
 
-        const fechaStr = fecha.toISOString().split('T')[0]
+        const fechaStr = inicio.toISOString().split('T')[0]
 
-        return horarios
-            .filter(h => h.frecuencia !== 'SEMANAL' || h.fechaInicio.getDay() === fecha.getDay())
+        return candidatos
+            .filter(h => {
+                if (h.frecuencia === FrecuenciaHorario.UNICO)   return h.fechaInicio >= inicio && h.fechaInicio <= fin
+                if (h.frecuencia === FrecuenciaHorario.SEMANAL) return h.fechaInicio.getUTCDay() === diaUTC
+                return true // DIARIO: ya pasa el filtro de BD
+            })
             .map(h => ({
-                horarioID:     h.horarioID,
-                autobusID:     h.autobusID,
-                origen:        h.ruta.ciudadOrigen,
-                destino:       h.ruta.ciudadDestino,
-                fecha:         fechaStr,
-                hora:          formatHora(h.horaSalida),
-                tipoServicio:  TIPO_SERVICIO[h.autobus.tipoServicio] ?? h.autobus.tipoServicio,
-                precio:        Number(h.ruta.tarifaBase),
+                horarioID:      h.horarioID,
+                autobusID:      h.autobusID,
+                origen:         h.ruta.ciudadOrigen,
+                destino:        h.ruta.ciudadDestino,
+                fecha:          fechaStr,
+                hora:           formatHora(h.horaSalida),
+                tipoServicio:   TIPO_SERVICIO[h.autobus.tipoServicio] ?? h.autobus.tipoServicio,
+                precio:         Number(h.ruta.tarifaBase),
                 asientosLibres: h.autobus.capacidadAsientos - h._count.boletos,
             }))
             .filter(v => v.asientosLibres >= minAsientos)

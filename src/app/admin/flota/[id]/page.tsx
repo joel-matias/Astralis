@@ -218,10 +218,10 @@ export default async function DetalleAutobusPage({ params }: { params: Promise<{
                                 className={`hover:bg-surface-container-low/50 transition-colors ${i % 2 === 1 ? 'bg-surface-container-low/30' : ''}`}>
                                 <td className="px-6 py-4 text-sm font-medium text-on-surface">{MTO_LABEL[m.tipo]}</td>
                                 <td className="px-6 py-4 text-sm text-on-surface-variant">
-                                    {m.fechaInicio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    {m.fechaInicio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-on-surface-variant">
-                                    {m.fechaFin ? new Date(m.fechaFin).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                    {m.fechaFin ? new Date(m.fechaFin).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-on-surface">{m.responsable}</td>
                                 <td className="px-6 py-4">

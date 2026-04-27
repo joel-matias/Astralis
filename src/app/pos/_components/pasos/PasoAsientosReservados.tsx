@@ -4,7 +4,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import type { ViajeSeleccionado, AsientoSeleccionado } from '../VentaWizard'
 import { obtenerAsientosAction } from '../../actions'
-import type { AsientoData } from '../../actions'
+import type { AsientoData } from '@/repositories/boletos/AsientoRepository'
 
 interface Props {
     viaje: ViajeSeleccionado

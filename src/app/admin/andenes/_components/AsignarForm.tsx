@@ -138,7 +138,7 @@ export function AsignarForm({ horarios, andenes, action }: Props) {
                                             <p className="text-xs text-secondary">{h.ruta.ciudadOrigen} → {h.ruta.ciudadDestino}</p>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-on-surface">
-                                            {new Date(h.horaSalida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(h.horaSalida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="px-2 py-1 bg-surface-container-high text-secondary rounded-full text-xs font-semibold">

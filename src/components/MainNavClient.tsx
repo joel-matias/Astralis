@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const ROL_INICIO: Record<string, string> = {
-    ADMIN:              '/admin/dashboard',
-    GERENTE:            '/operaciones/dashboard',
-    VENDEDOR_TAQUILLA:  '/pos',
+    ADMIN: '/admin/dashboard',
+    GERENTE: '/operaciones/dashboard',
+    VENDEDOR_TAQUILLA: '/pos',
     SUPERVISOR_ANDENES: '/andenes',
     ENCARGADO_EQUIPAJE: '/equipaje',
 }
@@ -52,12 +52,12 @@ export default function MainNavClient({ links, nombre, role }: Props) {
                     {nombre && (
                         <span className="text-sm text-secondary font-medium hidden lg:block">{nombre}</span>
                     )}
-                    <button className="text-secondary hover:text-primary p-2 transition-colors">
+                    {/* <button className="text-secondary hover:text-primary p-2 transition-colors">
                         <span className="material-symbols-outlined">notifications</span>
                     </button>
                     <button className="text-secondary hover:text-primary p-2 transition-colors">
                         <span className="material-symbols-outlined">account_circle</span>
-                    </button>
+                    </button> */}
                 </div>
             </div>
         </nav>

@@ -80,12 +80,12 @@ export default async function HorarioDetallePage({ params }: PageProps) {
                 <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_0_40px_rgba(20,27,44,0.04)]">
                     <h2 className="text-xs font-bold uppercase tracking-widest text-secondary mb-4">Programación</h2>
                     <dl className="space-y-3">
-                        <InfoRow label="Fecha de inicio" value={horario.fechaInicio.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })} />
+                        <InfoRow label="Fecha de inicio" value={horario.fechaInicio.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' })} />
                         <InfoRow label="Hora de salida" value={new Date(horario.horaSalida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} />
                         <InfoRow label="Frecuencia" value={FRECUENCIA_LABEL[horario.frecuencia]} />
                         <InfoRow label="Vigencia" value={VIGENCIA_LABEL[horario.vigencia]} />
                         {horario.fechaFin && (
-                            <InfoRow label="Fecha de fin" value={horario.fechaFin.toLocaleDateString('es-MX')} />
+                            <InfoRow label="Fecha de fin" value={horario.fechaFin.toLocaleDateString('es-MX', { timeZone: 'UTC' })} />
                         )}
                         <InfoRow label="Precio base" value={`$${Number(horario.precioBase).toFixed(2)} MXN`} highlight />
                     </dl>
@@ -120,7 +120,7 @@ export default async function HorarioDetallePage({ params }: PageProps) {
                     <dl className="space-y-3">
                         <InfoRow label="Nombre" value={horario.conductor.nombreCompleto} />
                         <InfoRow label="Número de licencia" value={horario.conductor.numeroLicencia} mono />
-                        <InfoRow label="Licencia vigente hasta" value={horario.conductor.vigenciaLicencia.toLocaleDateString('es-MX')} />
+                        <InfoRow label="Licencia vigente hasta" value={horario.conductor.vigenciaLicencia.toLocaleDateString('es-MX', { timeZone: 'UTC' })} />
                     </dl>
                 </div>
 

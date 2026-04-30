@@ -1,6 +1,8 @@
+// D1, D2, D3 CU6 — Entidad principal del caso de uso Administración de Conductores
 import { EstadoConductor } from '@prisma/client'
 
 export class Conductor {
+    // D3: idConductor: int → String (UUID) en código
     private conductorID: string
     private nombreCompleto: string
     private domicilio: string
@@ -47,74 +49,68 @@ export class Conductor {
     getFechaRegistro(): Date { return this.fechaRegistro }
     getMotivoBaja(): string | null { return this.motivoBaja }
 
-    registraDatos(datos: Map<string, unknown>): boolean {
-        return (
-            datos.has('nombreCompleto') &&
-            datos.has('CURP') &&
-            datos.has('numeroLicencia') &&
-            datos.has('vigenciaLicencia')
-        )
+    // D3: registrarDatos — valida presencia de campos obligatorios en la instancia
+    registrarDatos(): boolean {
+        return !!(this.nombreCompleto && this.CURP && this.numeroLicencia && this.vigenciaLicencia)
     }
 
-    actualizarDatos(datosNuevos: Map<string, unknown>): boolean {
+    // D3: actualizarDatosNuevos(Map): boolean
+    actualizarDatosNuevos(datosNuevos: Map<string, unknown>): boolean {
         if (datosNuevos.has('domicilio')) this.domicilio = datosNuevos.get('domicilio') as string
         if (datosNuevos.has('numeroTelefonico')) this.numeroTelefonico = datosNuevos.get('numeroTelefonico') as string
         if (datosNuevos.has('vigenciaLicencia')) this.vigenciaLicencia = datosNuevos.get('vigenciaLicencia') as Date
         return true
     }
 
-    // Regla: no puede darse de baja si tiene viaje activo
-    darDeBaja(motivo: string): boolean {
-        if (this.estado === EstadoConductor.NO_DISPONIBLE) return false
+    // D3: darDeBajaMotivo(String): boolean — D5: bloquea si está AsignadoAViaje; permite desde Temporal
+    darDeBajaMotivo(motivo: string): boolean {
+        if (this.estado === EstadoConductor.NO_DISPONIBLE && this.motivoBaja === 'ASIGNADO_A_VIAJE') return false
         this.motivoBaja = motivo
         this.estado = EstadoConductor.INACTIVO
         return true
     }
 
+    // D3, D5: cambiarEstado — respeta las reglas del diagrama de estados
     cambiarEstado(nuevoEstado: EstadoConductor): boolean {
-        if (this.estado === EstadoConductor.NO_DISPONIBLE &&
-            nuevoEstado === EstadoConductor.INACTIVO) {
-            return false  // Debe reasignarse primero
+        // D5: No puede pasar a Inactivo si está NO_DISPONIBLE (tiene viaje activo)
+        if (this.estado === EstadoConductor.NO_DISPONIBLE && nuevoEstado === EstadoConductor.INACTIVO) {
+            return false
         }
+        // D5: No se permite reactivar si la licencia está vencida
         if (nuevoEstado === EstadoConductor.ACTIVO && !this.verificarLicenciaVigente()) {
-            return false  // No se reactiva con licencia vencida
+            return false
         }
         this.estado = nuevoEstado
         return true
     }
 
+    // D3: verificarLicenciaVigente(): boolean
     verificarLicenciaVigente(): boolean {
         return this.vigenciaLicencia > new Date()
     }
 
-    verificarEstadoActivo(): void {
-        // Lanza excepción o señal si no está activo — ver servicio
+    // D3: verificarEstadoActivo(): boolean
+    verificarEstadoActivo(): boolean {
+        return this.estado === EstadoConductor.ACTIVO
     }
 
+    // D3, D5: establecerEstadoActivo(): void — solo si licencia vigente
     establecerEstadoActivo(): void {
         if (this.verificarLicenciaVigente()) {
             this.estado = EstadoConductor.ACTIVO
         }
     }
 
-    registrarMotivoBajaActivo(motivo: string): void {
+    // D3: registrarMotivoDeBajaAnterior(String): void
+    registrarMotivoDeBajaAnterior(motivo: string | null): void {
         this.motivoBaja = motivo
     }
 
-    registrarEstadoAnterior(): void {
-        // LogAuditoria registra el estado anterior
-    }
+    // D3: registrarEstadoAnterior(): void — NegAud registra el estado anterior en log
+    registrarEstadoAnterior(): void {}
 
+    // D3: esActivo(): boolean
     esActivo(): boolean {
         return this.estado === EstadoConductor.ACTIVO
-    }
-
-    estaDisponible(): boolean {
-        return this.esActivo() && this.verificarLicenciaVigente()
-    }
-
-    recibirNotificacion(msg: string): void {
-        // NotificacionService.enviarNotificacion(this.conductorID, msg)
-        void msg
     }
 }

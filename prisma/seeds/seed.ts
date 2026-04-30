@@ -6,14 +6,20 @@ const prisma = new PrismaClient()
 // Solo son datos de pruebas para comenzar, luego agreagmos mas
 
 async function main() {
-    // ── ROL ──────────────────────────────────────────────────────────────────
+    // ── ROLES ─────────────────────────────────────────────────────────────────
     const rol = await prisma.rol.upsert({
         where: { nombre: 'ADMIN' },
         update: {},
         create: { nombre: 'ADMIN' },
     })
 
-    // ── USUARIO ───────────────────────────────────────────────────────────────
+    const rolDespachadador = await prisma.rol.upsert({
+        where: { nombre: 'DESPACHADOR_UNIDADES' },
+        update: {},
+        create: { nombre: 'DESPACHADOR_UNIDADES' },
+    })
+
+    // ── USUARIOS ──────────────────────────────────────────────────────────────
     const hash = await bcrypt.hash('admin1234', 10)
     const usuario = await prisma.usuario.upsert({
         where: { email: 'admin@astralis.mx' },
@@ -23,6 +29,18 @@ async function main() {
             email: 'admin@astralis.mx',
             contrasenaHash: hash,
             rolID: rol.rolID,
+        },
+    })
+
+    const hashDesp = await bcrypt.hash('despacha1234', 10)
+    await prisma.usuario.upsert({
+        where: { email: 'despachador@astralis.mx' },
+        update: {},
+        create: {
+            nombreCompleto: 'Despachador de Unidades',
+            email: 'despachador@astralis.mx',
+            contrasenaHash: hashDesp,
+            rolID: rolDespachadador.rolID,
         },
     })
 

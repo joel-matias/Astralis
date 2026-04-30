@@ -6,8 +6,9 @@ const LINKS_POR_ROL: Record<string, { href: string; label: string }[]> = {
         { href: '/admin/dashboard',  label: 'Dashboard'      },
         { href: '/admin/rutas',      label: 'Rutas'          },
         { href: '/admin/horarios',   label: 'Programación'   },
-        { href: '/admin/flota',      label: 'Flota'          },
-        { href: '/admin/reportes',   label: 'Reportes'       },
+        { href: '/admin/flota',        label: 'Flota'          },
+        { href: '/admin/conductores', label: 'Conductores'    },
+        { href: '/admin/reportes',    label: 'Reportes'       },
         { href: '/admin/andenes',    label: 'Andenes'        },
         { href: '/pos',              label: 'Taquilla'       },
     ],
@@ -23,6 +24,9 @@ const LINKS_POR_ROL: Record<string, { href: string; label: string }[]> = {
     ],
     ENCARGADO_EQUIPAJE: [
         { href: '/equipaje', label: 'Equipaje' },
+    ],
+    DESPACHADOR_UNIDADES: [
+        { href: '/admin/conductores', label: 'Conductores' },
     ],
 }
 

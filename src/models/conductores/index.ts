@@ -1,2 +1,6 @@
 export { Conductor } from './Conductor'
 export { AsignacionConductorViaje } from './AsignacionConductorViaje'
+export { Viaje } from './Viaje'
+export { ValidadorDatos } from './ValidadorDatos'
+export { LogAuditoria } from './LogAuditoria'
+export type { ConductorDTO } from './ConductorDTO'

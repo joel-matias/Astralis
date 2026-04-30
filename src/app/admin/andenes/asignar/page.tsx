@@ -7,29 +7,43 @@ export default async function AsignarAndenPage() {
 
     // Horarios programados sin andén asignado (flujo normal paso 2)
     const horarios = await prisma.horario.findMany({
-        where: {
-            estado: 'ACTIVO',
-            asignacionesAnden: {
-                none: {
-                    cancelada: false,
-                    estado: { in: ['RESERVADO', 'OCUPADO'] }
-                }
-            }
-        },
+        where: { estado: 'ACTIVO' },
         include: {
             ruta: {
                 select: { nombreRuta: true, ciudadOrigen: true, ciudadDestino: true }
             },
             autobus: {
                 select: { numeroEconomico: true, placas: true }
+            },
+            asignacionesAnden: {
+                where: {
+                    cancelada: false,
+                    estado: { in: ['RESERVADO', 'OCUPADO'] }
+                },
+                take: 1,
+                include: {
+                    anden: {
+                        select: { andenID: true, numero: true, horarioDisponible: true }
+                    }
+                }
             }
         },
         orderBy: { horaSalida: 'asc' }
     })
 
-    const horariosSerialized = horarios.map(h => ({ ...h, precioBase: Number(h.precioBase) }))
+    const horariosMapeados = horarios.map(h => ({
+        horarioID: h.horarioID,
+        horaSalida: h.horaSalida,
+        ruta: h.ruta,
+        autobus: h.autobus,
+        andenAsignado: h.asignacionesAnden[0]
+            ? {
+                asignacionID: h.asignacionesAnden[0].asignacionID,
+                anden: h.asignacionesAnden[0].anden
+            }
+            : null
+    }))
 
-    // Andenes disponibles (flujo normal paso 4)
     const andenes = await prisma.anden.findMany({
         where: { estado: 'DISPONIBLE' },
         orderBy: { numero: 'asc' }
@@ -56,9 +70,10 @@ export default async function AsignarAndenPage() {
             </header>
 
             <AsignarForm
-                horarios={horariosSerialized}
+                horarios={horariosMapeados}
                 andenes={andenes}
                 action={asignarAnden}
+
             />
         </div>
     )

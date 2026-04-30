@@ -66,7 +66,7 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                     href="/admin/andenes/asignar"
                     className="bg-linear-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95 w-fit"
                 >
-                    <span className="material-symbols-outlined">add_circle</span>
+                    
                     Asignar Anden
                 </Link>
                 <Link
@@ -111,7 +111,7 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                                 </td>
                                 <td className="px-6 py-4 text-sm text-on-surface">
                                     {anden.asignaciones.length === 0
-                                        ? '-'
+                                        ? 'Ninguno'
                                         : anden.asignaciones
                                             .map(a => a.horario?.autobus?.numeroEconomico)
                                             .filter(Boolean)
@@ -126,7 +126,8 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                                     </Link>
                                     <Link href={`/admin/andenes/${anden.andenID}/editar`} className="text-secondary hover:text-primary transition-colors p-1"
                                         title="Editar">
-                                        <span className="material-symbols-outlined">edit</span></Link>
+                                        <span className="material-symbols-outlined">edit</span>
+                                    </Link>
                                 </td>
                             </tr>
                         ))}

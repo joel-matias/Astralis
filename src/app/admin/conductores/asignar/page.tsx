@@ -1,5 +1,4 @@
 import { NegAsig } from '@/services/conductores/NegAsig'
-import { RepoCond } from '@/repositories/conductores/RepoCond'
 import UIAsig from '../_components/UIAsig'
 
 // D7, D6 CU6 — UIAsig: Página Asignación Conductor a Viaje
@@ -7,12 +6,7 @@ import UIAsig from '../_components/UIAsig'
 
 export default async function AsignarConductorPage() {
     const negAsig = new NegAsig()
-    const repoCond = new RepoCond()
-
-    const [viajes, conductores] = await Promise.all([
-        negAsig.obtenerViajesProgramados(),
-        repoCond.findAll(),
-    ])
+    const viajes = await negAsig.obtenerViajesProgramados()
 
     const viajesSerialized = viajes.map(v => ({
         horarioID: v.horarioID,
@@ -20,18 +14,12 @@ export default async function AsignarConductorPage() {
             nombreRuta: v.ruta.nombreRuta,
             ciudadOrigen: v.ruta.ciudadOrigen,
             ciudadDestino: v.ruta.ciudadDestino,
+            tiempoEstimadoHrs: Number(v.ruta.tiempoEstimadoHrs),
         },
         conductor: v.conductor ? { nombreCompleto: v.conductor.nombreCompleto } : null,
+        asignacionActiva: v.asignacionConductorViaje ? !v.asignacionConductorViaje.liberado : false,
         fechaInicio: v.fechaInicio,
         horaSalida: v.horaSalida,
-    }))
-
-    const conductoresSerialized = conductores.map(c => ({
-        conductorID: c.conductorID,
-        nombreCompleto: c.nombreCompleto,
-        curp: c.curp,
-        vigenciaLicencia: c.vigenciaLicencia,
-        estado: c.estado,
     }))
 
     return (
@@ -51,7 +39,7 @@ export default async function AsignarConductorPage() {
             </div>
 
             <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-[0_0_40px_rgba(20,27,44,0.06)]">
-                <UIAsig viajes={viajesSerialized} conductores={conductoresSerialized} />
+                <UIAsig viajes={viajesSerialized} />
             </div>
         </div>
     )

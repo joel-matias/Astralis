@@ -254,8 +254,8 @@ function Pagination({ currentPage, totalPages, q, estado }: {
                     key={p}
                     href={buildUrl(p, q, estado)}
                     className={`w-10 h-10 rounded-xl flex items-center justify-center font-medium transition-colors text-sm ${p === currentPage
-                            ? 'bg-primary text-on-primary font-bold shadow-md'
-                            : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high'
+                        ? 'bg-primary text-on-primary font-bold shadow-md'
+                        : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high'
                         }`}
                 >
                     {p}

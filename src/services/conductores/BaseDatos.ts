@@ -47,20 +47,35 @@ export class BaseDatos {
         }
     }
 
-    // D3: guardarAsignacion(CV: AsignacionConductorViaje): boolean
+    // D3: guardarAsignacion(CV: AsignacionConductorViaje): boolean — crea o actualiza para reasignación
     async guardarAsignacion(asig: AsignacionConductorViaje): Promise<boolean> {
         try {
             const conductorID = asig.getConductor()?.getConductorID()
             const horarioID = asig.getViaje()?.getIdViaje()
             if (!conductorID || !horarioID) return false
-            await prisma.asignacionConductorViaje.create({
-                data: {
-                    asignacionID: asig.getIdAsignacion(),
-                    conductorID,
-                    horarioID,
-                    observaciones: asig.getObservaciones() || undefined,
-                },
-            })
+
+            const existente = await prisma.asignacionConductorViaje.findFirst({ where: { horarioID } })
+            if (existente) {
+                await prisma.asignacionConductorViaje.updateMany({
+                    where: { horarioID },
+                    data: {
+                        conductorID,
+                        fechaAsignacion: new Date(),
+                        observaciones: asig.getObservaciones() || null,
+                        liberado: false,
+                        fechaLiberacion: null,
+                    },
+                })
+            } else {
+                await prisma.asignacionConductorViaje.create({
+                    data: {
+                        asignacionID: asig.getIdAsignacion(),
+                        conductorID,
+                        horarioID,
+                        observaciones: asig.getObservaciones() || undefined,
+                    },
+                })
+            }
             return true
         } catch {
             return false
@@ -80,11 +95,41 @@ export class BaseDatos {
         })
     }
 
-    // D3, D6: obtenerViajesProgramados(): List
+    // D7: obtenerConductoresParaViaje(horarioID) — filtra ACTIVO + licencia vigente + sin choque de horario
+    async obtenerConductoresParaViaje(horarioID: string) {
+        const horario = await prisma.horario.findUnique({ where: { horarioID } })
+        if (!horario) return []
+
+        const hoy = new Date()
+
+        const conChoque = await prisma.asignacionConductorViaje.findMany({
+            where: {
+                liberado: false,
+                horarioID: { not: horarioID },
+                horario: {
+                    fechaInicio: { lte: horario.fechaInicio },
+                    OR: [{ fechaFin: null }, { fechaFin: { gte: horario.fechaInicio } }],
+                },
+            },
+            select: { conductorID: true },
+        })
+
+        const idsConChoque = conChoque.map(a => a.conductorID)
+        return prisma.conductor.findMany({
+            where: {
+                estado: EstadoConductor.ACTIVO,
+                vigenciaLicencia: { gt: hoy },
+                ...(idsConChoque.length > 0 ? { conductorID: { notIn: idsConChoque } } : {}),
+            },
+            orderBy: { nombreCompleto: 'asc' },
+        })
+    }
+
+    // D3, D6: obtenerViajesProgramados(): List — incluye viajes con conductor para reasignación
     async obtenerViajesProgramados() {
         return prisma.horario.findMany({
-            where: { estado: 'ACTIVO', asignacionConductorViaje: null },
-            include: { ruta: true, conductor: true },
+            where: { estado: 'ACTIVO' },
+            include: { ruta: true, conductor: true, asignacionConductorViaje: true },
             orderBy: { fechaInicio: 'asc' },
         })
     }

@@ -3,6 +3,8 @@
 import { NegReg } from '@/services/conductores/NegReg'
 import { NegEst } from '@/services/conductores/NegEst'
 import { NegAsig } from '@/services/conductores/NegAsig'
+import { NegAud } from '@/services/conductores/NegAud'
+import { BaseDatos } from '@/services/conductores/BaseDatos'
 import { auth } from '@/auth'
 import { revalidatePath } from 'next/cache'
 
@@ -83,4 +85,29 @@ export async function liberarConductorAction(asignacionID: string, conductorID: 
     const resultado = await negAsig.liberarConductor(asignacionID, conductorID, usuarioID)
     if (resultado.ok) revalidatePath(`/admin/conductores/${conductorID}`)
     return resultado
+}
+
+// D7: obtener conductores candidatos para un viaje — Activos, licencia vigente, sin choque de horario
+export async function obtenerConductoresParaViajeAction(horarioID: string) {
+    const bd = new BaseDatos()
+    const conductores = await bd.obtenerConductoresParaViaje(horarioID)
+    return conductores.map(c => ({
+        conductorID: c.conductorID,
+        nombreCompleto: c.nombreCompleto,
+        curp: c.curp,
+        vigenciaLicencia: c.vigenciaLicencia,
+        estado: c.estado,
+    }))
+}
+
+// S1.2: registrar abandono del flujo de asignación
+export async function registrarAbandonoAction() {
+    const usuarioID = await getUserID()
+    const negAud = new NegAud()
+    await negAud.registrar({
+        usuarioID,
+        accion: 'ABANDONAR_ASIGNACION',
+        resultado: 'Abandonado',
+        detalles: 'Usuario abandonó el flujo de asignación de conductor',
+    })
 }

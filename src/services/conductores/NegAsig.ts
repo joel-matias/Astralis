@@ -77,6 +77,32 @@ export class NegAsig {
         })
         if (!horarioData) return { ok: false, error: 'Viaje no encontrado' }
 
+        // Reasignación: si el horario ya tiene conductor activo, liberarlo primero
+        const asignacionExistente = await prisma.asignacionConductorViaje.findFirst({
+            where: { horarioID, liberado: false },
+            include: { conductor: true },
+        })
+        let prevNombreConductor: string | null = null
+        if (asignacionExistente && asignacionExistente.conductorID !== conductorID) {
+            prevNombreConductor = asignacionExistente.conductor.nombreCompleto
+            const prev = asignacionExistente.conductor
+            const prevCond = new Conductor(
+                prev.conductorID,
+                prev.nombreCompleto,
+                prev.domicilio ?? '',
+                prev.curp,
+                prev.numeroLicencia,
+                prev.vigenciaLicencia,
+                prev.numeroTelefonico ?? '',
+                prev.estado,
+                prev.fechaRegistro,
+                prev.motivoBaja
+            )
+            prevCond.establecerEstadoActivo()
+            prevCond.registrarMotivoDeBajaAnterior(null)
+            await this.bd.guardarCambios(prevCond)
+        }
+
         // D6: viajeSel — instanciar objeto de dominio Viaje
         const viajeSel = new Viaje(
             horarioData.horarioID,
@@ -97,19 +123,22 @@ export class NegAsig {
         // D5: marcar sub-estado AsignadoAViaje en el conductor
         condSel.registrarMotivoDeBajaAnterior('ASIGNADO_A_VIAJE')
 
-        // D6: guardarAsignacion(nuevaAsig) — persiste la asignación
+        // D6: guardarAsignacion(nuevaAsig) — crea o actualiza (reasignación)
         const guardado = await this.bd.guardarAsignacion(nuevaAsig)
         if (!guardado) return { ok: false, error: 'Error al guardar la asignación' }
 
         // D6: guardarCambios(condSel) — persiste el nuevo estado NO_DISPONIBLE del conductor
         await this.bd.guardarCambios(condSel)
 
-        // D6: registrar("Asignación conductor a viaje")
+        // D6: registrar — formato según postcondición del CU: "Asignación de conductor: <nombre> → Viaje <id>"
+        const esReasignacion = prevNombreConductor !== null
         await this.negAud.registrar({
             usuarioID,
-            accion: 'ASIGNAR_CONDUCTOR',
+            accion: esReasignacion ? 'REASIGNAR_CONDUCTOR' : 'ASIGNAR_CONDUCTOR',
             resultado: 'Exito',
-            detalles: `conductorID=${conductorID} horarioID=${horarioID}`,
+            detalles: esReasignacion
+                ? `Reasignación de conductor: ${condData.nombreCompleto} → Viaje ${horarioID} (reemplaza a ${prevNombreConductor})`
+                : `Asignación de conductor: ${condData.nombreCompleto} → Viaje ${horarioID}`,
         })
 
         return { ok: true, asignacionID }

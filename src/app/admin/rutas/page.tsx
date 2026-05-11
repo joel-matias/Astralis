@@ -47,7 +47,7 @@ export default async function RutasPage({ searchParams }: PageProps) {
                 <div>
                     <div className="flex items-center gap-3 mb-1">
                         <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">
-                            Gestión de Rutas
+                            Administración de Rutas
                         </h1>
                         <span className="bg-surface-container-high text-primary font-bold px-3 py-1 rounded-full text-sm">
                             {total} Total
@@ -253,11 +253,10 @@ function Pagination({ currentPage, totalPages, q, estado }: {
                 <Link
                     key={p}
                     href={buildUrl(p, q, estado)}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-medium transition-colors text-sm ${
-                        p === currentPage
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-medium transition-colors text-sm ${p === currentPage
                             ? 'bg-primary text-on-primary font-bold shadow-md'
                             : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high'
-                    }`}
+                        }`}
                 >
                     {p}
                 </Link>

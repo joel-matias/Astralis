@@ -42,7 +42,16 @@ export default function UIAsig({ viajes }: Props) {
     const [error, setError] = useState<string | null>(null)
     const [exito, setExito] = useState(false)
     const [confirmarCancelar, setConfirmarCancelar] = useState(false)
+    const [busqueda, setBusqueda] = useState('')
     const [isPending, startTransition] = useTransition()
+
+    const viajesFiltrados = busqueda.trim() === ''
+        ? viajes
+        : viajes.filter(v =>
+            v.ruta.ciudadOrigen.toLowerCase().includes(busqueda.toLowerCase()) ||
+            v.ruta.ciudadDestino.toLowerCase().includes(busqueda.toLowerCase()) ||
+            v.ruta.nombreRuta.toLowerCase().includes(busqueda.toLowerCase())
+        )
 
     // D7 paso 3: seleccionar viaje → cargar conductores candidatos filtrados (paso 5)
     async function seleccionarViaje(horarioID: string) {
@@ -128,17 +137,25 @@ export default function UIAsig({ viajes }: Props) {
                 </div>
             )}
 
-            {/* Paso 2: Selección de viaje — incluye viajes con conductor para reasignación */}
+            {/* Paso 2: Selección de viaje — incluye buscador y viajes con conductor para reasignación */}
             <div>
                 <h3 className="text-base font-semibold text-on-surface mb-3 flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary">directions_bus</span>
                     1. Selecciona el viaje
                 </h3>
-                {viajes.length === 0 ? (
-                    <p className="text-sm text-secondary">No hay viajes programados.</p>
+                <input
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                    placeholder="Buscar por origen o destino…"
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-2.5 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-sm mb-3"
+                />
+                {viajesFiltrados.length === 0 ? (
+                    <p className="text-sm text-secondary">
+                        {viajes.length === 0 ? 'No hay viajes programados.' : 'Sin resultados para la búsqueda.'}
+                    </p>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {viajes.map(v => (
+                        {viajesFiltrados.map(v => (
                             <button key={v.horarioID}
                                 onClick={() => seleccionarViaje(v.horarioID)}
                                 className={`text-left p-4 rounded-xl border-2 transition-all ${

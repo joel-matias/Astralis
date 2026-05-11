@@ -13,16 +13,14 @@ export class RepoAsig {
         return prisma.asignacionConductorViaje.create({ data: datos })
     }
 
-    // D6: obtenerViajesProgramados() — horarios ACTIVOS que aún no tienen conductor asignado
+    // D6: obtenerViajesProgramados() — horarios ACTIVOS; incluye asignados para reasignación
     async findViajesProgramados() {
         return prisma.horario.findMany({
-            where: {
-                estado: 'ACTIVO',
-                asignacionConductorViaje: null,
-            },
+            where: { estado: 'ACTIVO' },
             include: {
                 ruta: true,
                 conductor: true,
+                asignacionConductorViaje: true,
             },
             orderBy: { fechaInicio: 'asc' },
         })

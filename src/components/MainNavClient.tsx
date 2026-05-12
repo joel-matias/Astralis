@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 
 const ROL_INICIO: Record<string, string> = {
     ADMIN: '/admin/dashboard',
@@ -52,12 +53,13 @@ export default function MainNavClient({ links, nombre, role }: Props) {
                     {nombre && (
                         <span className="text-sm text-secondary font-medium hidden lg:block">{nombre}</span>
                     )}
-                    {/* <button className="text-secondary hover:text-primary p-2 transition-colors">
-                        <span className="material-symbols-outlined">notifications</span>
+                    <button
+                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        title="Cerrar sesión"
+                        className="text-secondary hover:text-error p-1.5 rounded-lg hover:bg-error-container/40 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-xl">logout</span>
                     </button>
-                    <button className="text-secondary hover:text-primary p-2 transition-colors">
-                        <span className="material-symbols-outlined">account_circle</span>
-                    </button> */}
                 </div>
             </div>
         </nav>

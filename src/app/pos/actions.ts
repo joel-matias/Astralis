@@ -52,3 +52,20 @@ export async function procesarVentaAction(datos: {
         montoRecibido: datos.montoRecibido,
     })
 }
+// CU Vender Boleto: Paso 8 — RN7: bloquea asientos seleccionados por 5 minutos
+// mientras el cliente completa el pago
+export async function bloquearAsientosAction(asientoIDs: string[]): Promise<void> {
+    await mapaService.reservarTemporalmente(asientoIDs, 5)
+}
+
+// CU Vender Boleto: S2.1 — busca la siguiente fecha con viajes disponibles
+export async function buscarFechaAlternativaAction(
+    origen: string,
+    destino: string,
+    fecha: string,
+    pax: number
+): Promise<string | null> {
+    const fechaBase = new Date(fecha)
+    return buscador.buscarFechaAlternativa(origen, destino, fechaBase, pax)
+}
+

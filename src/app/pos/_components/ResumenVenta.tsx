@@ -12,7 +12,7 @@ interface Props {
 export default function ResumenVenta({ datos, estado, onConfirmarPago }: Props) {
     const { viaje, asientos, metodoPago } = datos
     const subtotal = viaje ? viaje.precio * asientos.length : 0
-    const enPago = estado === 'ProcesandoPago' || estado === 'PagoRechazado'
+    const enPago = estado === 'ProcesandoPago' || estado === 'PagoRechazado' || estado === 'BoletoEmitido' || estado === 'ComprobanteFiscalGenerado'
 
     return (
         <aside className="w-80 shrink-0 bg-surface-container-lowest rounded-xl border border-outline-variant flex flex-col shadow-[0_0_40px_rgba(20,27,44,0.04)] sticky top-24">

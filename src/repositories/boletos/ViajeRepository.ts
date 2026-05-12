@@ -37,12 +37,14 @@ export class ViajeRepository {
             },
             include: {
                 ruta:    { select: { ciudadOrigen: true, ciudadDestino: true, tarifaBase: true } },
-                autobus: { select: { capacidadAsientos: true, tipoServicio: true } },
+                autobus: { select: { capacidadAsientos: true, tipoServicio: true, asientos: { select: { reservadoHasta: true } } } },
                 _count:  { select: { boletos: { where: { estado: { not: 'CANCELADO' } } } } },
             },
         })
 
         const fechaStr = inicio.toISOString().split('T')[0]
+        const ahora = new Date()
+
 
         return candidatos
             .filter(h => {
@@ -50,7 +52,12 @@ export class ViajeRepository {
                 if (h.frecuencia === FrecuenciaHorario.SEMANAL) return h.fechaInicio.getUTCDay() === diaUTC
                 return true // DIARIO: ya pasa el filtro de BD
             })
-            .map(h => ({
+            .map(h => {
+                const reservados = h.autobus.asientos.filter(
+                    a => a.reservadoHasta && a.reservadoHasta > ahora
+                ).length
+                return {
+
                 horarioID:      h.horarioID,
                 autobusID:      h.autobusID,
                 origen:         h.ruta.ciudadOrigen,
@@ -59,8 +66,9 @@ export class ViajeRepository {
                 hora:           formatHora(h.horaSalida),
                 tipoServicio:   TIPO_SERVICIO[h.autobus.tipoServicio] ?? h.autobus.tipoServicio,
                 precio:         Number(h.ruta.tarifaBase),
-                asientosLibres: h.autobus.capacidadAsientos - h._count.boletos,
-            }))
+                asientosLibres: h.autobus.capacidadAsientos - h._count.boletos - reservados,
+            }
+            })
             .filter(v => v.asientosLibres >= minAsientos)
     }
 
@@ -83,4 +91,17 @@ export class ViajeRepository {
         })
         return rutas.map(r => r.ciudadDestino)
     }
+    // CU Vender Boleto: S2.1 — busca la siguiente fecha con viajes disponibles
+    async buscarFechaAlternativa(origen: string, destino: string, fechaBase: Date, pax: number): Promise<string | null> {
+        for (let i = 1; i <= 30; i++) {
+            const fechaStr = fechaBase.toISOString().split('T')[0]
+            const [y, m, d] = fechaStr.split('-').map(Number)
+            const fecha = new Date(Date.UTC(y, m - 1, d + i))
+            const resultados = await this.buscarViajes(origen, destino, fecha, pax)
+            if (resultados.length > 0) {
+                return fecha.toISOString().split('T')[0]
+            }
+        }
+        return null
+}
 }

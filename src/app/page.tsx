@@ -8,6 +8,7 @@ function rutaSegunRol(role: string | undefined): string {
         case 'VENDEDOR_TAQUILLA': return '/pos'
         case 'SUPERVISOR_ANDENES': return '/andenes'
         case 'ENCARGADO_EQUIPAJE': return '/equipaje'
+        case 'DESPACHADOR_UNIDADES': return '/admin/conductores'
         default: return '/login'
     }
 }

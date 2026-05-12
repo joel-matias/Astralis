@@ -26,4 +26,9 @@ export class BuscadorViajes {
     async obtenerDestinos(origen: string): Promise<string[]> {
         return this.repo.obtenerDestinos(origen)
     }
+
+    // CU Vender Boleto: S2.1 — delega búsqueda de fecha alternativa al repositorio
+    async buscarFechaAlternativa(origen: string, destino: string, fecha: Date, pax: number): Promise<string | null> {
+        return this.repo.buscarFechaAlternativa(origen, destino, fecha, pax)
+    }
 }

@@ -9,6 +9,7 @@ import PasoProcesandoPago from './pasos/PasoProcesandoPago'
 import PasoBoletoEmitido from './pasos/PasoBoletoEmitido'
 import PasoVentaFinalizada from './pasos/PasoVentaFinalizada'
 
+
 export type ViajeSeleccionado = {
     id: string
     autobusID: string

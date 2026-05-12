@@ -15,13 +15,17 @@ export class MapaAsientos {
     async obtenerMapa(horarioID: string): Promise<AsientoData[]> {
         return this.repo.obtenerPorHorario(horarioID)
     }
+    
 
     seleccionar(nums: string[]): Asiento[] { return [] }
 
     verificarDisponibilidad(): boolean { return false }
+    // CU Vender Boleto: Paso 8 — RN7: reserva asientos temporalmente por 5 minutos
+    async reservarTemporalmente(asientoIDs: string[], minutos: number = 5): Promise<void> {
+        await this.repo.bloquearTemporalmente(asientoIDs, minutos)
+    }
 
-    reservarTemporalmente(minutos: number): void {}
-
+    // CU Vender Boleto: Paso 10 — calcula el total de la venta
     calcularTotal(numPasajeros: number, precioBase: number): number {
         return numPasajeros * precioBase
     }

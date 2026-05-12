@@ -3,7 +3,7 @@
 // D6 CU4 — Estado BuscandoViaje; formulario de búsqueda con datos reales de BD
 import { useState, useEffect, useTransition } from 'react'
 import type { ViajeSeleccionado } from '../VentaWizard'
-import { buscarViajesAction, obtenerDestinosAction } from '../../actions'
+import { buscarViajesAction, obtenerDestinosAction, buscarFechaAlternativaAction } from '../../actions'
 import type { ViajeData } from '@/repositories/boletos/ViajeRepository'
 
 function fechaLocal(): string {
@@ -30,6 +30,7 @@ export default function PasoBuscandoViaje({ origenes, onViajeSeleccionado }: Pro
     const [pax, setPax]         = useState(1)
     const [viajes, setViajes]   = useState<ViajeData[]>([])
     const [buscado, setBuscado] = useState(false)
+    const [fechaAlternativa, setFechaAlternativa] = useState<string | null>(null)
 
     const [isPendingDestinos, startDestinos] = useTransition()
     const [isPendingBuscar, startBuscar]     = useTransition()
@@ -52,10 +53,16 @@ export default function PasoBuscandoViaje({ origenes, onViajeSeleccionado }: Pro
     function buscar(e: React.FormEvent) {
         e.preventDefault()
         if (!destino) return
+        setFechaAlternativa(null)
         startBuscar(async () => {
             const resultados = await buscarViajesAction(origen, destino, fecha, pax)
             setViajes(resultados)
             setBuscado(true)
+            // CU Vender Boleto: S2.1 — si no hay viajes busca fecha alternativa
+            if (resultados.length === 0) {
+                const alternativa = await buscarFechaAlternativaAction(origen, destino, fecha, pax)
+                setFechaAlternativa(alternativa)
+            }
         })
     }
 
@@ -228,6 +235,20 @@ export default function PasoBuscandoViaje({ origenes, onViajeSeleccionado }: Pro
                                 <span className="material-symbols-outlined text-4xl text-outline block mb-2">directions_bus_filled</span>
                                 <p className="text-on-surface font-medium mb-1">No hay viajes disponibles</p>
                                 <p className="text-secondary text-sm">Intenta con otra fecha u otro destino</p>
+                                {/* CU Vender Boleto: S2.1 — muestra fecha alternativa si existe */}
+                                {fechaAlternativa && (
+                                    <button
+                                        onClick={() => {
+                                            setFecha(fechaAlternativa)
+                                            setBuscado(false)
+                                            setFechaAlternativa(null)
+                                        }}
+                                        className="mt-4 px-6 py-2 bg-primary text-on-primary font-bold rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center gap-2 mx-auto"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">calendar_today</span>
+                                        Ver viajes el {fechaAlternativa}
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

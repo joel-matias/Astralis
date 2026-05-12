@@ -21,6 +21,7 @@ export class AsientoRepository {
             select: {
                 asientoID: true,
                 numero:    true,
+                reservadoHasta: true,
                 boletos: {
                     where: { horarioID, estado: { not: 'CANCELADO' } },
                     select: { boletoID: true },
@@ -28,11 +29,26 @@ export class AsientoRepository {
             },
             orderBy: { numero: 'asc' },
         })
-
+        const ahora = new Date()
         return asientos.map(a => ({
             asientoID: a.asientoID,
             numero:    a.numero,
-            ocupado:   a.boletos.length > 0,
+            ocupado: a.boletos.length > 0 || (!!a.reservadoHasta && a.reservadoHasta > ahora),
         }))
+    }
+    //CU vender boleto: Paso 8 — RN7: bloquea asientos seleccionados por 5 minutos
+    async bloquearTemporalmente(asientoIDs: string[], minutos: number = 5): Promise<void> {
+        const reservadoHasta = new Date(Date.now() + minutos * 60 * 1000)
+        await prisma.asiento.updateMany({
+            where: { asientoID: { in: asientoIDs } },
+            data: { reservadoHasta },
+        })
+    }
+
+    async liberarBloqueo(asientoIDs: string[]): Promise<void> {
+        await prisma.asiento.updateMany({
+            where: { asientoID: { in: asientoIDs } },
+            data: { reservadoHasta: null },
+        })
     }
 }

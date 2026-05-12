@@ -3,8 +3,9 @@
 // D6 CU4 — Estado AsientosReservados; mapa visual del autobús con datos reales de BD
 import { useState, useEffect, useTransition } from 'react'
 import type { ViajeSeleccionado, AsientoSeleccionado } from '../VentaWizard'
-import { obtenerAsientosAction } from '../../actions'
+import { obtenerAsientosAction, bloquearAsientosAction } from '../../actions'
 import type { AsientoData } from '@/repositories/boletos/AsientoRepository'
+
 
 interface Props {
     viaje: ViajeSeleccionado
@@ -42,7 +43,8 @@ export default function PasoAsientosReservados({ viaje, numPasajeros, asientosSe
         })
     }
 
-    function confirmar() {
+    async function confirmar() {
+        await bloquearAsientosAction(seleccionados.map(a => a.asientoID))
         onAsientosConfirmados(seleccionados)
         onContinuar()
     }

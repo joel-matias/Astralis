@@ -16,7 +16,9 @@ export default async function AsignarConductorPage() {
             ciudadDestino: v.ruta.ciudadDestino,
             tiempoEstimadoHrs: Number(v.ruta.tiempoEstimadoHrs),
         },
-        conductor: v.conductor ? { nombreCompleto: v.conductor.nombreCompleto } : null,
+        conductor: v.asignacionConductorViaje && !v.asignacionConductorViaje.liberado && v.asignacionConductorViaje.conductor
+            ? { nombreCompleto: v.asignacionConductorViaje.conductor.nombreCompleto }
+            : v.conductor ? { nombreCompleto: v.conductor.nombreCompleto } : null,
         asignacionActiva: v.asignacionConductorViaje ? !v.asignacionConductorViaje.liberado : false,
         fechaInicio: v.fechaInicio,
         horaSalida: v.horaSalida,

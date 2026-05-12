@@ -45,6 +45,6 @@ export class Viaje {
 
     // D3: estaProgramado(): boolean
     estaProgramado(): boolean {
-        return this.estado === 'Programado' && this.fechaHoraSalida > new Date()
+        return this.estado === 'Programado'
     }
 }

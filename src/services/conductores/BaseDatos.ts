@@ -1,8 +1,13 @@
 // D3, D5 CU6 — BaseDatos: abstracción de acceso a datos del módulo Administración de Conductores
 import { prisma } from '@/lib/prisma'
-import { EstadoConductor } from '@prisma/client'
+import { EstadoConductor, FrecuenciaHorario } from '@prisma/client'
 import { Conductor } from '@/models/conductores/Conductor'
 import { AsignacionConductorViaje } from '@/models/conductores/AsignacionConductorViaje'
+
+// Convierte un campo @db.Time de Prisma a minutos desde medianoche (UTC)
+function minutosDesde(t: Date): number {
+    return t.getUTCHours() * 60 + t.getUTCMinutes()
+}
 
 export class BaseDatos {
 
@@ -97,24 +102,57 @@ export class BaseDatos {
 
     // D7: obtenerConductoresParaViaje(horarioID) — filtra ACTIVO + licencia vigente + sin choque de horario
     async obtenerConductoresParaViaje(horarioID: string) {
-        const horario = await prisma.horario.findUnique({ where: { horarioID } })
+        const horario = await prisma.horario.findUnique({
+            where: { horarioID },
+            include: { ruta: true },
+        })
         if (!horario) return []
 
         const hoy = new Date()
 
-        const conChoque = await prisma.asignacionConductorViaje.findMany({
+        // Pre-filtro en BD: descarta asignaciones cuya vigencia ya terminó antes del inicio del nuevo horario
+        const asignaciones = await prisma.asignacionConductorViaje.findMany({
             where: {
                 liberado: false,
                 horarioID: { not: horarioID },
-                horario: {
-                    fechaInicio: { lte: horario.fechaInicio },
-                    OR: [{ fechaFin: null }, { fechaFin: { gte: horario.fechaInicio } }],
-                },
+                horario: { OR: [{ fechaFin: null }, { fechaFin: { gte: horario.fechaInicio } }] },
             },
-            select: { conductorID: true },
+            include: { horario: { include: { ruta: true } } },
         })
 
-        const idsConChoque = conChoque.map(a => a.conductorID)
+        const finNuevo = horario.fechaFin ?? new Date('9999-12-31')
+        const iNuevo = minutosDesde(horario.horaSalida)
+        const fNuevo = iNuevo + Number(horario.ruta.tiempoEstimadoHrs) * 60
+
+        const idsConChoque = asignaciones
+            .filter(a => {
+                const h = a.horario
+                // Periodos de vigencia deben solaparse
+                const finH = h.fechaFin ?? new Date('9999-12-31')
+                if (h.fechaInicio > finNuevo || horario.fechaInicio > finH) return false
+
+                // SEMANAL solo corre el día de la semana de su fechaInicio
+                const hSem = h.frecuencia === FrecuenciaHorario.SEMANAL
+                const nSem = horario.frecuencia === FrecuenciaHorario.SEMANAL
+                if (hSem || nSem) {
+                    if (hSem && nSem) {
+                        if (h.fechaInicio.getUTCDay() !== horario.fechaInicio.getUTCDay()) return false
+                    } else if (hSem && horario.frecuencia === FrecuenciaHorario.UNICO) {
+                        if (horario.fechaInicio.getUTCDay() !== h.fechaInicio.getUTCDay()) return false
+                    } else if (nSem && h.frecuencia === FrecuenciaHorario.UNICO) {
+                        if (h.fechaInicio.getUTCDay() !== horario.fechaInicio.getUTCDay()) return false
+                    }
+                    // SEMANAL + DIARIO: coinciden en el día de la semana dentro del periodo → choque posible
+                }
+
+                // Choque de horas reales: [salida, salida + duración) debe solaparse
+                if (!h.ruta) return false
+                const iH = minutosDesde(h.horaSalida)
+                const fH = iH + Number(h.ruta.tiempoEstimadoHrs) * 60
+                return iH < fNuevo && iNuevo < fH
+            })
+            .map(a => a.conductorID)
+
         return prisma.conductor.findMany({
             where: {
                 estado: EstadoConductor.ACTIVO,
@@ -129,7 +167,7 @@ export class BaseDatos {
     async obtenerViajesProgramados() {
         return prisma.horario.findMany({
             where: { estado: 'ACTIVO' },
-            include: { ruta: true, conductor: true, asignacionConductorViaje: true },
+            include: { ruta: true, conductor: true, asignacionConductorViaje: { include: { conductor: true } } },
             orderBy: { fechaInicio: 'asc' },
         })
     }
@@ -142,22 +180,47 @@ export class BaseDatos {
         return activa !== null
     }
 
-    // D3: verificarChoqueHorario(cond, viaje): boolean
+    // D3: verificarChoqueHorario(cond, viaje): boolean — E5
     async verificarChoqueHorario(conductorID: string, horarioID: string): Promise<boolean> {
-        const horarioNuevo = await prisma.horario.findUnique({ where: { horarioID } })
+        const horarioNuevo = await prisma.horario.findUnique({
+            where: { horarioID },
+            include: { ruta: true },
+        })
         if (!horarioNuevo) return true
 
         const activas = await prisma.asignacionConductorViaje.findMany({
             where: { conductorID, liberado: false, horarioID: { not: horarioID } },
-            include: { horario: true },
+            include: { horario: { include: { ruta: true } } },
         })
+
+        const finNuevo = horarioNuevo.fechaFin ?? new Date('9999-12-31')
+        const iNuevo = minutosDesde(horarioNuevo.horaSalida)
+        const fNuevo = iNuevo + Number(horarioNuevo.ruta.tiempoEstimadoHrs) * 60
 
         return activas.some(a => {
             const h = a.horario
-            return (
-                h.fechaInicio <= horarioNuevo.fechaInicio &&
-                (h.fechaFin === null || h.fechaFin >= horarioNuevo.fechaInicio)
-            )
+
+            // Periodos de vigencia deben solaparse
+            const finH = h.fechaFin ?? new Date('9999-12-31')
+            if (h.fechaInicio > finNuevo || horarioNuevo.fechaInicio > finH) return false
+
+            // SEMANAL solo corre el día de la semana de su fechaInicio
+            const hSem = h.frecuencia === FrecuenciaHorario.SEMANAL
+            const nSem = horarioNuevo.frecuencia === FrecuenciaHorario.SEMANAL
+            if (hSem || nSem) {
+                if (hSem && nSem) {
+                    if (h.fechaInicio.getUTCDay() !== horarioNuevo.fechaInicio.getUTCDay()) return false
+                } else if (hSem && horarioNuevo.frecuencia === FrecuenciaHorario.UNICO) {
+                    if (horarioNuevo.fechaInicio.getUTCDay() !== h.fechaInicio.getUTCDay()) return false
+                } else if (nSem && h.frecuencia === FrecuenciaHorario.UNICO) {
+                    if (h.fechaInicio.getUTCDay() !== horarioNuevo.fechaInicio.getUTCDay()) return false
+                }
+            }
+
+            // Choque de horas reales: [salida, salida + duración) debe solaparse
+            const iH = minutosDesde(h.horaSalida)
+            const fH = iH + Number(h.ruta.tiempoEstimadoHrs) * 60
+            return iH < fNuevo && iNuevo < fH
         })
     }
 

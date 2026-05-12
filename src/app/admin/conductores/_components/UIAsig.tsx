@@ -77,7 +77,15 @@ export default function UIAsig({ viajes }: Props) {
         startTransition(async () => {
             const res = await asignarConductorAction(conductorSeleccionado, viajeSeleccionado, observaciones)
             if (res.ok) setExito(true)
-            else setError(res.error ?? 'Error al asignar')
+            else {
+                setError(res.error ?? 'Error al asignar')
+                // E1.1: viaje ya no existe → regresar al paso 2
+                if (res.error === 'Viaje no encontrado') {
+                    setViajeSeleccionado(null)
+                    setConductorSeleccionado(null)
+                    setConductoresDisponibles([])
+                }
+            }
         })
     }
 
@@ -223,11 +231,15 @@ export default function UIAsig({ viajes }: Props) {
                         </p>
                     ) : conductoresDisponibles.length === 0 ? (
                         /* E2: Sin disponibilidad */
-                        <p data-testid="sin-conductores"
-                            className="text-sm text-error flex items-center gap-1">
-                            <span className="material-symbols-outlined text-base">warning</span>
-                            Sin disponibilidad: no hay conductores activos con licencia vigente y sin choque de horario.
-                        </p>
+                        <div data-testid="sin-conductores" className="space-y-1">
+                            <p className="text-sm text-error flex items-center gap-1">
+                                <span className="material-symbols-outlined text-base">warning</span>
+                                Sin disponibilidad: no hay conductores activos con licencia vigente y sin choque de horario.
+                            </p>
+                            <p className="text-sm text-secondary pl-6">
+                                Selecciona otro viaje o verifica la disponibilidad de los conductores.
+                            </p>
+                        </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {conductoresDisponibles.map(c => (

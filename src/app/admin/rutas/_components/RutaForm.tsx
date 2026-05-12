@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { RutaDTO, ParadaDTO } from '@/models/rutas/RutaDTO'
+import { calcularDistanciaRuta } from '../actions'
 import { CityInput } from './CityInput'
 
 interface ParadaItem extends ParadaDTO {
@@ -44,6 +45,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
     const [tipoRuta, setTipoRuta] = useState<string>(
         defaultValues.tipoRuta ?? 'DIRECTA'
     )
+    const [ciudadOrigen, setCiudadOrigen] = useState(defaultValues.ciudadOrigen ?? '')
 
     const [paradas, setParadas] = useState<ParadaItem[]>(
         defaultParadas.map((p, i) => ({ ...p, key: `existing-${i}` }))
@@ -51,6 +53,24 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
 
     const [capturando, setCapturando] = useState(false)
     const [nuevaParada, setNuevaParada] = useState({ ...PARADA_VACIA })
+    const [calculandoDist, setCalculandoDist] = useState(false)
+
+    async function calcularDistanciaParada(ciudadParada: string) {
+        if (!ciudadOrigen || !ciudadParada) return
+        setCalculandoDist(true)
+        try {
+            const res = await calcularDistanciaRuta(ciudadOrigen, ciudadParada, [])
+            if (res.distanciaKm > 0) {
+                setNuevaParada(p => ({
+                    ...p,
+                    distanciaDesdeOrigenKm: String(res.distanciaKm),
+                    tiempoEsperaMin: String(Math.round(res.tiempoHoras * 60)),
+                }))
+            }
+        } finally {
+            setCalculandoDist(false)
+        }
+    }
 
     function iniciarCaptura() {
         setNuevaParada({ ...PARADA_VACIA })
@@ -210,7 +230,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                                 className="w-full bg-surface-container-low border-0 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-on-surface transition-all text-sm"
                             >
                                 <option value="DIRECTA">DIRECTA</option>
-                                <option value="CON_PARADAS">CON ESCALA</option>
+                                <option value="CON_PARADAS">CON PARADAS</option>
                             </select>
                         </div>
 
@@ -247,6 +267,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                                             defaultValue={defaultValues.ciudadOrigen}
                                             placeholder="Ciudad de México"
                                             required
+                                            onChange={setCiudadOrigen}
                                             className="w-full bg-surface-container-lowest border-0 rounded-xl px-4 py-2.5 text-on-surface text-sm focus:ring-2 focus:ring-primary/20 transition-all"
                                         />
                                     </div>
@@ -439,30 +460,43 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                                                 <CityInput
                                                     value={nuevaParada.ciudad}
                                                     onChange={v => setNuevaParada(p => ({ ...p, ciudad: v }))}
+                                                    onSelect={calcularDistanciaParada}
                                                     placeholder="Ciudad, Estado"
                                                     className="w-full bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20"
                                                 />
                                             </td>
                                             <td className="px-6 py-4">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.1"
-                                                    value={nuevaParada.distanciaDesdeOrigenKm}
-                                                    onChange={e => setNuevaParada(p => ({ ...p, distanciaDesdeOrigenKm: e.target.value }))}
-                                                    placeholder="0"
-                                                    className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20"
-                                                />
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={nuevaParada.distanciaDesdeOrigenKm}
+                                                        onChange={e => setNuevaParada(p => ({ ...p, distanciaDesdeOrigenKm: e.target.value }))}
+                                                        placeholder="0"
+                                                        disabled={calculandoDist}
+                                                        className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                                                    />
+                                                    {calculandoDist && (
+                                                        <span className="absolute right-2 top-2 material-symbols-outlined text-sm text-primary animate-spin">progress_activity</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    value={nuevaParada.tiempoEsperaMin}
-                                                    onChange={e => setNuevaParada(p => ({ ...p, tiempoEsperaMin: e.target.value }))}
-                                                    placeholder="0"
-                                                    className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20"
-                                                />
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={nuevaParada.tiempoEsperaMin}
+                                                        onChange={e => setNuevaParada(p => ({ ...p, tiempoEsperaMin: e.target.value }))}
+                                                        placeholder="0"
+                                                        disabled={calculandoDist}
+                                                        className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                                                    />
+                                                    {calculandoDist && (
+                                                        <span className="absolute right-2 top-2 material-symbols-outlined text-sm text-primary animate-spin">progress_activity</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <input
@@ -509,7 +543,7 @@ export function RutaForm({ modo, action, defaultValues = {}, defaultParadas = []
                         <div className="mt-8 p-5 bg-surface-container-low rounded-xl flex items-start gap-3">
                             <span className="material-symbols-outlined text-secondary shrink-0 mt-0.5">info</span>
                             <p className="text-sm text-secondary leading-relaxed">
-                                Las rutas CON ESCALA calculan disponibilidad por tramos.
+                                Las rutas CON PARADAS calculan disponibilidad por tramos.
                                 Asegúrate de que la suma de distancias no exceda la distancia total de la ruta.
                             </p>
                         </div>

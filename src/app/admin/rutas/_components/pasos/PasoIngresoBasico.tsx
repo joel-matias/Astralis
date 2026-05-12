@@ -124,7 +124,7 @@ export function PasoIngresoBasico({ codigoGenerado, defaultValues = {}, onSiguie
                             className="w-full bg-surface-container-low border-0 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-on-surface transition-all text-sm"
                         >
                             <option value="DIRECTA">DIRECTA</option>
-                            <option value="CON_PARADAS">CON ESCALA</option>
+                            <option value="CON_PARADAS">CON PARADAS</option>
                         </select>
                     </div>
 

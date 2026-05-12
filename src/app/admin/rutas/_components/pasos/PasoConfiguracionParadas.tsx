@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { CityInput } from '../CityInput'
-import { validarParadaServidor } from '../../actions'
+import { validarParadaServidor, calcularDistanciaRuta } from '../../actions'
 
 // Parada con key de React para gestión de lista
 export interface ParadaWizard {
@@ -18,6 +18,7 @@ export interface ParadaWizard {
 
 interface Props {
     paradas: ParadaWizard[]
+    ciudadOrigen: string
     onFinalizar: (paradas: ParadaWizard[]) => void
     onAtras: () => void
 }
@@ -30,12 +31,30 @@ const VACIA = {
     tarifaDesdeOrigen: '',
 }
 
-export function PasoConfiguracionParadas({ paradas: paradasIniciales, onFinalizar, onAtras }: Props) {
+export function PasoConfiguracionParadas({ paradas: paradasIniciales, ciudadOrigen, onFinalizar, onAtras }: Props) {
     const [paradas, setParadas] = useState<ParadaWizard[]>(paradasIniciales)
     const [capturando, setCapturando] = useState(false)
     const [nueva, setNueva] = useState({ ...VACIA })
     const [errorParada, setErrorParada] = useState<string | null>(null)
+    const [calculandoDist, setCalculandoDist] = useState(false)
     const [validando, startValidacion] = useTransition()
+
+    async function calcularDistanciaParada(ciudadParada: string) {
+        if (!ciudadOrigen || !ciudadParada) return
+        setCalculandoDist(true)
+        try {
+            const res = await calcularDistanciaRuta(ciudadOrigen, ciudadParada, [])
+            if (res.distanciaKm > 0) {
+                setNueva(p => ({
+                    ...p,
+                    distanciaDesdeOrigenKm: String(res.distanciaKm),
+                    tiempoEsperaMin: String(Math.round(res.tiempoHoras * 60)),
+                }))
+            }
+        } finally {
+            setCalculandoDist(false)
+        }
+    }
 
     function iniciarCaptura() {
         setNueva({ ...VACIA })
@@ -200,27 +219,40 @@ export function PasoConfiguracionParadas({ paradas: paradasIniciales, onFinaliza
                                         <CityInput
                                             value={nueva.ciudad}
                                             onChange={v => setNueva(p => ({ ...p, ciudad: v }))}
+                                            onSelect={calcularDistanciaParada}
                                             placeholder="Ciudad, Estado"
                                             className="w-full bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20"
                                         />
                                     </td>
                                     <td className="px-6 py-4">
-                                        <input
-                                            type="number" min="0" step="0.1"
-                                            value={nueva.distanciaDesdeOrigenKm}
-                                            onChange={e => setNueva(p => ({ ...p, distanciaDesdeOrigenKm: e.target.value }))}
-                                            placeholder="0"
-                                            className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type="number" min="0" step="0.1"
+                                                value={nueva.distanciaDesdeOrigenKm}
+                                                onChange={e => setNueva(p => ({ ...p, distanciaDesdeOrigenKm: e.target.value }))}
+                                                placeholder="0"
+                                                disabled={calculandoDist}
+                                                className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                                            />
+                                            {calculandoDist && (
+                                                <span className="absolute right-2 top-2 material-symbols-outlined text-sm text-primary animate-spin">progress_activity</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <input
-                                            type="number" min="0"
-                                            value={nueva.tiempoEsperaMin}
-                                            onChange={e => setNueva(p => ({ ...p, tiempoEsperaMin: e.target.value }))}
-                                            placeholder="0"
-                                            className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type="number" min="0"
+                                                value={nueva.tiempoEsperaMin}
+                                                onChange={e => setNueva(p => ({ ...p, tiempoEsperaMin: e.target.value }))}
+                                                placeholder="0"
+                                                disabled={calculandoDist}
+                                                className="w-20 bg-surface-container-lowest border-0 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                                            />
+                                            {calculandoDist && (
+                                                <span className="absolute right-2 top-2 material-symbols-outlined text-sm text-primary animate-spin">progress_activity</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <input
@@ -261,7 +293,7 @@ export function PasoConfiguracionParadas({ paradas: paradasIniciales, onFinaliza
                 <div className="mt-8 p-5 bg-surface-container-low rounded-xl flex items-start gap-3">
                     <span className="material-symbols-outlined text-secondary shrink-0 mt-0.5">info</span>
                     <p className="text-sm text-secondary leading-relaxed">
-                        Las rutas CON ESCALA calculan disponibilidad por tramos.
+                        Las rutas CON PARADAS calculan disponibilidad por tramos.
                         Asegúrate de que la suma de distancias no exceda la distancia total de la ruta.
                     </p>
                 </div>

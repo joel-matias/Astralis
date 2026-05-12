@@ -127,9 +127,10 @@ export function RutaWizard({ codigoGenerado }: Props) {
             )}
 
             {/* Paso 2: ConfigurandoParadas (solo si tipoRuta = CON_PARADAS) */}
-            {estado === 'configurando_paradas' && (
+            {estado === 'configurando_paradas' && datosBasicos && (
                 <PasoConfiguracionParadas
                     paradas={paradas}
+                    ciudadOrigen={datosBasicos.ciudadOrigen}
                     onFinalizar={handleFinalizarParadas}
                     onAtras={() => setEstado('ingreso_basico')}
                 />

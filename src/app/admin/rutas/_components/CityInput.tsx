@@ -15,16 +15,19 @@ interface Props {
     defaultValue?: string
     value?: string
     onChange?: (value: string) => void
+    onSelect?: (value: string) => void
     placeholder?: string
     required?: boolean
     className?: string
 }
 
-export function CityInput({ name, defaultValue, value, onChange, placeholder, required, className }: Props) {
+export function CityInput({ name, defaultValue, value, onChange, onSelect, placeholder, required, className }: Props) {
     const [inputValue, setInputValue] = useState(value ?? defaultValue ?? '')
     const [suggestions, setSuggestions] = useState<Feature[]>([])
     const [open, setOpen] = useState(false)
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
     const containerRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     useEffect(() => {
@@ -41,6 +44,18 @@ export function CityInput({ name, defaultValue, value, onChange, placeholder, re
         return () => document.removeEventListener('mousedown', onClickOutside)
     }, [])
 
+    function updateDropdownPosition() {
+        if (!inputRef.current) return
+        const rect = inputRef.current.getBoundingClientRect()
+        setDropdownStyle({
+            position: 'fixed',
+            top: rect.bottom + 4,
+            left: rect.left,
+            width: rect.width,
+            zIndex: 9999,
+        })
+    }
+
     function fetchSuggestions(query: string) {
         if (timerRef.current) clearTimeout(timerRef.current)
         if (query.length < 2 || !token) { setSuggestions([]); return }
@@ -53,6 +68,7 @@ export function CityInput({ name, defaultValue, value, onChange, placeholder, re
                 )
                 const data = await res.json()
                 setSuggestions(data.features ?? [])
+                updateDropdownPosition()
                 setOpen(true)
             } catch {
                 setSuggestions([])
@@ -73,6 +89,7 @@ export function CityInput({ name, defaultValue, value, onChange, placeholder, re
             .replace(/, México$/, '')
         setInputValue(cityState)
         onChange?.(cityState)
+        onSelect?.(cityState)
         setSuggestions([])
         setOpen(false)
     }
@@ -87,17 +104,18 @@ export function CityInput({ name, defaultValue, value, onChange, placeholder, re
     return (
         <div ref={containerRef} className="relative">
             <input
+                ref={inputRef}
                 name={name}
                 value={inputValue}
                 onChange={handleChange}
-                onFocus={() => suggestions.length > 0 && setOpen(true)}
+                onFocus={() => { if (suggestions.length > 0) { updateDropdownPosition(); setOpen(true) } }}
                 placeholder={placeholder}
                 required={required}
                 className={className}
                 autoComplete="off"
             />
             {open && suggestions.length > 0 && (
-                <ul className="absolute z-50 w-full mt-1 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-lg overflow-hidden">
+                <ul style={dropdownStyle} className="bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-lg overflow-hidden">
                     {suggestions.map(f => (
                         <li key={f.id}>
                             <button

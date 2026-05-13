@@ -165,8 +165,22 @@ export class BaseDatos {
 
     // D3, D6: obtenerViajesProgramados(): List — incluye viajes con conductor para reasignación
     async obtenerViajesProgramados() {
+        const hoy = new Date()
+        hoy.setUTCHours(0, 0, 0, 0)
+
         return prisma.horario.findMany({
-            where: { estado: 'ACTIVO' },
+            where: {
+                estado: 'ACTIVO',
+                AND: [
+                    // Vigencia no expirada
+                    { OR: [{ fechaFin: null }, { fechaFin: { gte: hoy } }] },
+                    // UNICO que ya pasó no aparece; DIARIO/SEMANAL siempre pasan este filtro
+                    { OR: [
+                        { frecuencia: { not: FrecuenciaHorario.UNICO } },
+                        { fechaInicio: { gte: hoy } },
+                    ]},
+                ],
+            },
             include: { ruta: true, conductor: true, asignacionConductorViaje: { include: { conductor: true } } },
             orderBy: { fechaInicio: 'asc' },
         })

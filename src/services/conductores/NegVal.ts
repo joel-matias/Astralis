@@ -26,4 +26,20 @@ export class NegVal {
         }
         return { valido: true }
     }
+
+    // Valida solo los campos editables en la actualización (nombre, vigencia, teléfono)
+    async validarActualizacion(datos: Map<string, unknown>): Promise<{ valido: boolean; error?: string }> {
+        const nombre = datos.get('nombreCompleto') as string | undefined
+        if (!nombre?.trim()) {
+            return { valido: false, error: 'El nombre completo es obligatorio' }
+        }
+        const vigencia = datos.get('vigenciaLicencia') as string | undefined
+        if (!vigencia || isNaN(new Date(vigencia).getTime())) {
+            return { valido: false, error: 'Fecha de vigencia inválida' }
+        }
+        if (!this.validador.validarFormatos(datos)) {
+            return { valido: false, error: 'Formato inválido en teléfono' }
+        }
+        return { valido: true }
+    }
 }

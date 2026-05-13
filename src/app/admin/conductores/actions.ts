@@ -4,6 +4,7 @@ import { NegReg } from '@/services/conductores/NegReg'
 import { NegEst } from '@/services/conductores/NegEst'
 import { NegAsig } from '@/services/conductores/NegAsig'
 import { NegAud } from '@/services/conductores/NegAud'
+import { NegVal } from '@/services/conductores/NegVal'
 import { BaseDatos } from '@/services/conductores/BaseDatos'
 import { auth } from '@/auth'
 import { revalidatePath } from 'next/cache'
@@ -14,14 +15,27 @@ async function getUserID(): Promise<string | undefined> {
 }
 
 export async function registrarConductorAction(formData: FormData) {
+    const curp = (formData.get('curp') as string | null)?.toUpperCase() ?? ''
+    const datos = new Map<string, unknown>([
+        ['nombreCompleto', formData.get('nombreCompleto') ?? ''],
+        ['curp', curp],
+        ['numeroLicencia', formData.get('numeroLicencia') ?? ''],
+        ['vigenciaLicencia', formData.get('vigenciaLicencia') ?? ''],
+        ['numeroTelefonico', formData.get('numeroTelefonico') || undefined],
+    ])
+
+    const negVal = new NegVal()
+    const validacion = await negVal.validarRegistro(datos)
+    if (!validacion.valido) return { ok: false, error: validacion.error }
+
     const usuarioID = await getUserID()
     const negReg = new NegReg()
     const resultado = await negReg.registrarConductor({
-        nombreCompleto: formData.get('nombreCompleto') as string,
+        nombreCompleto: datos.get('nombreCompleto') as string,
         domicilio: formData.get('domicilio') as string,
-        curp: (formData.get('curp') as string).toUpperCase(),
-        numeroLicencia: formData.get('numeroLicencia') as string,
-        vigenciaLicencia: formData.get('vigenciaLicencia') as string,
+        curp: datos.get('curp') as string,
+        numeroLicencia: datos.get('numeroLicencia') as string,
+        vigenciaLicencia: datos.get('vigenciaLicencia') as string,
         numeroTelefonico: formData.get('numeroTelefonico') as string,
     }, usuarioID)
 
@@ -30,6 +44,16 @@ export async function registrarConductorAction(formData: FormData) {
 }
 
 export async function actualizarConductorAction(conductorID: string, formData: FormData) {
+    const datos = new Map<string, unknown>([
+        ['nombreCompleto', formData.get('nombreCompleto') ?? ''],
+        ['vigenciaLicencia', formData.get('vigenciaLicencia') ?? ''],
+        ['numeroTelefonico', formData.get('numeroTelefonico') || undefined],
+    ])
+
+    const negVal = new NegVal()
+    const validacion = await negVal.validarActualizacion(datos)
+    if (!validacion.valido) return { ok: false, error: validacion.error }
+
     const usuarioID = await getUserID()
     const negReg = new NegReg()
     const resultado = await negReg.actualizarConductor(conductorID, {

@@ -1,8 +1,7 @@
 'use client'
 
 // D7 CU6 — UIBaja: Pantalla Baja Conductor — flujo completo de dar de baja con registro de motivo
-import { useState, useTransition } from 'react'
-import { darDeBajaAction } from '../actions'
+import { useBajaConductor } from '@/hooks/conductores/useBajaConductor'
 import { EstadoConductor } from '@prisma/client'
 
 interface Props {
@@ -13,11 +12,8 @@ interface Props {
 }
 
 export default function UIBaja({ conductorID, nombreCompleto, estadoActual, tieneViajeActivo }: Props) {
-    const [motivo, setMotivo] = useState('')
-    const [error, setError] = useState<string | null>(null)
-    const [exito, setExito] = useState(false)
-    const [confirmar, setConfirmar] = useState(false)
-    const [isPending, startTransition] = useTransition()
+    const { motivo, setMotivo, error, exito, confirmar, setConfirmar, isPending, solicitarBaja, confirmarBaja } =
+        useBajaConductor(conductorID)
 
     if (estadoActual === EstadoConductor.INACTIVO) {
         return (
@@ -49,19 +45,6 @@ export default function UIBaja({ conductorID, nombreCompleto, estadoActual, tien
         )
     }
 
-    function handleBaja() {
-        if (!motivo.trim()) { setError('El motivo es obligatorio'); return }
-        setConfirmar(true)
-    }
-
-    function handleConfirmar() {
-        startTransition(async () => {
-            const res = await darDeBajaAction(conductorID, motivo)
-            if (res.ok) setExito(true)
-            else setError(res.error ?? 'Error al dar de baja')
-        })
-    }
-
     return (
         <div className="space-y-4">
             {error && (
@@ -80,7 +63,7 @@ export default function UIBaja({ conductorID, nombreCompleto, estadoActual, tien
                             placeholder="Ej. Renuncia voluntaria, Término de contrato"
                             className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary text-sm" />
                     </div>
-                    <button onClick={handleBaja}
+                    <button onClick={solicitarBaja}
                         className="bg-error text-on-error px-6 py-2 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2">
                         <span className="material-symbols-outlined text-base">person_off</span>
                         Dar de baja
@@ -93,7 +76,7 @@ export default function UIBaja({ conductorID, nombreCompleto, estadoActual, tien
                     </p>
                     <p className="text-xs text-secondary">Motivo: {motivo}</p>
                     <div className="flex gap-3">
-                        <button onClick={handleConfirmar} disabled={isPending}
+                        <button onClick={confirmarBaja} disabled={isPending}
                             className="bg-error text-on-error px-6 py-2 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
                             {isPending ? 'Procesando…' : 'Confirmar baja'}
                         </button>

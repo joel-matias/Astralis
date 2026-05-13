@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { cambiarEstadoAutobusAction } from '../actions'
+// D6 CU5 — UIEstado: Pantalla Cambio Estado Autobús
+import { useEstadoAutobus } from '@/hooks/flota/useEstadoAutobus'
 import { EstadoAutobus } from '@prisma/client'
 
-// D6 — transiciones válidas según el Diagrama de Estados del Autobús
 const TRANSICIONES: Record<EstadoAutobus, { hacia: EstadoAutobus; etiqueta: string; icono: string; clase: string }[]> = {
     DISPONIBLE: [
         { hacia: 'EN_MANTENIMIENTO',  etiqueta: 'Iniciar mantenimiento', icono: 'build',  clase: 'bg-tertiary-container text-tertiary hover:bg-tertiary/20' },
@@ -28,36 +27,10 @@ interface Props {
     onCambio?: () => void
 }
 
-// D8: UIEstado — Pantalla Cambio Estado Autobús
 export function UIEstado({ autobusID, estadoActual, numeroEconomico, onCambio }: Props) {
-    const [motivo, setMotivo] = useState('')
-    const [procesando, setProcesando] = useState(false)
-    const [mensaje, setMensaje] = useState<{ tipo: 'error' | 'exito'; texto: string } | null>(null)
+    const { motivo, setMotivo, mensaje, isPending, cambiar } = useEstadoAutobus(autobusID)
 
     const opciones = TRANSICIONES[estadoActual] ?? []
-
-    async function cambiar(nuevoEstado: EstadoAutobus) {
-        if (!motivo.trim()) {
-            setMensaje({ tipo: 'error', texto: 'Indica el motivo del cambio de estado.' })
-            return
-        }
-        setProcesando(true)
-        setMensaje(null)
-        const resultado = await cambiarEstadoAutobusAction(autobusID, nuevoEstado, motivo)
-        setProcesando(false)
-        if (resultado.exito) {
-            setMensaje({ tipo: 'exito', texto: `Estado cambiado: ${resultado.estadoAnterior} → ${resultado.estadoNuevo}` })
-            setMotivo('')
-            onCambio?.()
-        } else {
-            const mensajes: Record<string, string> = {
-                transicion_invalida: 'Transición no permitida según el diagrama de estados.',
-                tiene_mto_abierto: 'Existe un mantenimiento abierto. Ciérralo antes de cambiar el estado.',
-                error_bd: 'Error al guardar el cambio. Intenta de nuevo.',
-            }
-            setMensaje({ tipo: 'error', texto: mensajes[resultado.motivo] ?? 'Error desconocido.' })
-        }
-    }
 
     if (opciones.length === 0) {
         return (
@@ -99,10 +72,10 @@ export function UIEstado({ autobusID, estadoActual, numeroEconomico, onCambio }:
 
             <div className="flex flex-wrap gap-3">
                 {opciones.map(op => (
-                    <button key={op.hacia} onClick={() => cambiar(op.hacia)} disabled={procesando}
+                    <button key={op.hacia} onClick={() => cambiar(op.hacia, onCambio)} disabled={isPending}
                         className={`${op.clase} font-medium text-sm py-2.5 px-5 rounded-xl transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2`}>
                         <span className="material-symbols-outlined text-base">{op.icono}</span>
-                        {procesando ? 'Procesando…' : op.etiqueta}
+                        {isPending ? 'Procesando…' : op.etiqueta}
                     </button>
                 ))}
             </div>

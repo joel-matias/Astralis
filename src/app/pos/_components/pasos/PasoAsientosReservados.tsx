@@ -19,14 +19,12 @@ interface Props {
 export default function PasoAsientosReservados({ viaje, numPasajeros, asientosSeleccionados, onAsientosConfirmados, onContinuar, onVolver }: Props) {
     const [seleccionados, setSeleccionados] = useState<AsientoSeleccionado[]>(asientosSeleccionados)
     const [asientos, setAsientos] = useState<AsientoData[]>([])
-    const [cargando, setCargando] = useState(true)
-    const [, startTransition] = useTransition()
+    const [isPending, startTransition] = useTransition()
 
     useEffect(() => {
         startTransition(async () => {
             const datos = await obtenerAsientosAction(viaje.id)
             setAsientos(datos)
-            setCargando(false)
         })
     }, [viaje.id])
 
@@ -102,7 +100,7 @@ export default function PasoAsientosReservados({ viaje, numPasajeros, asientosSe
                     </div>
                 </div>
 
-                {cargando ? (
+                {isPending ? (
                     <div className="flex items-center justify-center py-12">
                         <span className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                     </div>

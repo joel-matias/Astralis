@@ -1,9 +1,8 @@
 'use client'
 
 // D6 CU4 — Estado ProcesandoPago; datos del cliente y método de pago (E2 pago rechazado, E3 error)
-import { useState, useTransition } from 'react'
 import type { DatosVenta } from '../VentaWizard'
-import { procesarVentaAction } from '../../actions'
+import { useProcesadorPago } from '@/hooks/pos/useProcesadorPago'
 
 interface Props {
     datos: DatosVenta
@@ -20,44 +19,15 @@ interface Props {
 }
 
 export default function PasoProcesandoPago({ datos, rechazado, onPagoExitoso, onPagoRechazado, onVolver }: Props) {
-    const [nombre, setNombre] = useState('')
-    const [email, setEmail] = useState('')
-    const [metodoPago, setMetodoPago] = useState<'TPV' | 'EFECTIVO'>('TPV')
-    const [montoRecibido, setMontoRecibido] = useState('')
-    const [procesando, setProcesando] = useState(false)
-
-    const total = datos.viaje ? datos.viaje.precio * datos.asientos.length : 0
-    const cambio = metodoPago === 'EFECTIVO' ? Math.max(0, parseFloat(montoRecibido || '0') - total) : 0
-    const montoInsuficiente = metodoPago === 'EFECTIVO' && parseFloat(montoRecibido || '0') < total
-
-    async function procesarPago(e: React.FormEvent) {
-        e.preventDefault()
-        if (!nombre.trim() || !datos.viaje) return
-        setProcesando(true)
-
-        try {
-            const resultado = await procesarVentaAction({
-                horarioID: datos.viaje.id,
-                clienteNombre: nombre.trim(),
-                clienteEmail: email.trim() || undefined,
-                asientos: datos.asientos,
-                precioUnitario: datos.viaje.precio,
-                metodoPago,
-                montoRecibido: parseFloat(montoRecibido || String(total)),
-            })
-            onPagoExitoso(
-                { nombre: nombre.trim(), email: email.trim() },
-                metodoPago,
-                parseFloat(montoRecibido || String(total)),
-                resultado.transaccionId,
-                resultado.boletos
-            )
-        } catch {
-            onPagoRechazado()
-        } finally {
-            setProcesando(false)
-        }
-    }
+    const {
+        nombre, setNombre,
+        email, setEmail,
+        metodoPago, setMetodoPago,
+        montoRecibido, setMontoRecibido,
+        total, cambio, montoInsuficiente,
+        isPending,
+        procesarPago,
+    } = useProcesadorPago(datos, onPagoExitoso, onPagoRechazado)
 
     return (
         <div className="p-8 max-w-2xl">
@@ -187,10 +157,10 @@ export default function PasoProcesandoPago({ datos, rechazado, onPagoExitoso, on
                     </div>
                     <button
                         type="submit"
-                        disabled={procesando || montoInsuficiente}
+                        disabled={isPending || montoInsuficiente}
                         className="bg-primary text-on-primary font-bold px-8 py-3 rounded-xl flex items-center gap-2 hover:bg-primary-container transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed min-w-40 justify-center"
                     >
-                        {procesando ? (
+                        {isPending ? (
                             <>
                                 <span className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
                                 Procesando…

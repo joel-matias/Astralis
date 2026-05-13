@@ -1,15 +1,30 @@
-# ASTRALIS — Sistema de Gestión Integral para Central de Autobuses (SGICA)
+# ASTRALIS — Sistema de Gestión Integral para Central de Autobuses
 
 **Universidad Tecnológica de la Mixteca**  
-Materia: Desarrollo de Software Orientado a Objetos  
-Semestre: 602-A | Profesor: IC. Carlos Alberto Martínez Sandoval  
-Equipo 5: Emmanuel Cruz Victoriano, Samantha Betanzo Bolaños, Giovanni López Hernández, Joel Geovanny Matias Santiago
+Materia: Desarrollo Web 2  
+Semestre: 602-A | Profesor: M.T.C.A. Moisés Emmanuel Ramírez Guzmán
+Integrantes: Aline Briseida Pérez Bautista, Emmanuel Cruz Victoriano, Samantha Betanzo Bolaños, Giovanni López Hernández, Joel Geovanny Matias Santiago
 
 ---
 
 ## Descripción del sistema
 
 ASTRALIS es un portal web interno para la operación de una central de autobuses. Centraliza la gestión de rutas, programación de horarios, venta de boletos en taquilla, control de flota, administración de conductores, manejo de andenes y registro de equipaje. El acceso está protegido por roles: cada tipo de usuario ve únicamente las secciones que le corresponden.
+
+
+![Pantalla de inicio de sesión](docs/screenshots/01-login.png)
+
+---
+
+## Imágenes del sistema
+
+![Panel de administrador](docs/screenshots/02-dashboard.png)
+
+![Módulo de administración](docs/screenshots/03-admin-modulo.png)
+
+![Punto de venta — selección de asientos](docs/screenshots/04-pos.png)
+
+![Gestión de flota o conductores](docs/screenshots/05-flota-o-conductores.png)
 
 ---
 
@@ -26,6 +41,29 @@ ASTRALIS es un portal web interno para la operación de una central de autobuses
 | Testing E2E | Playwright |
 | Gestor de paquetes | npm |
 
+---
+
+## Arquitectura de contenedores
+
+El sistema corre completamente en local. No requiere orquestador de contenedores en producción. En desarrollo, la base de datos se levanta en un contenedor Docker para aislarla del sistema operativo del desarrollador; la aplicación Next.js corre directamente con Node.js.
+
+```
+┌─────────────────────────────────────────────┐
+│              Máquina del desarrollador       │
+│                                             │
+│   ┌─────────────────────┐                   │
+│   │   Next.js 16 (Node) │  :3000            │
+│   │   App Router + API  │                   │
+│   │   Server Actions    │                   │
+│   └──────────┬──────────┘                   │
+│              │ Prisma v6 (ORM)              │
+│   ┌──────────▼──────────┐                   │
+│   │  Docker Container   │                   │
+│   │  MySQL 8            │  :3306            │
+│   │  (solo en desarr.)  │                   │
+│   └─────────────────────┘                   │
+└─────────────────────────────────────────────┘
+```
 ---
 
 ## Instalación
@@ -201,16 +239,16 @@ src/
 
 ## Módulos implementados
 
-| # | Módulo | Estado | Tests E2E |
-|---|---|---|---|
-| CU1 | Seguridad y Autenticación | Completo | 11/11 ✅ |
-| CU2 | Administración de Rutas | Completo | 17/17 ✅ |
-| CU3 | Programación de Horarios y Viajes | Completo | 15/15 ✅ |
-| CU4 | Venta de Boletos (POS) | UI completa | Pendientes |
-| CU5 | Gestión de Flota de Autobuses | UI completa | Pendientes |
-| CU6 | Administración de Conductores | UI completa | Pendientes |
-| CU7 | Control de Andenes | En progreso | Pendientes |
-| CU8 | Gestión de Equipaje | Pendiente | Pendientes |
+| # | Módulo |
+|---|---|
+| CU1 | Seguridad y Autenticación |
+| CU2 | Administración de Rutas |
+| CU3 | Programación de Horarios y Viajes |
+| CU4 | Venta de Boletos (POS) |
+| CU5 | Gestión de Flota de Autobuses |
+| CU6 | Administración de Conductores |
+| CU7 | Control de Andenes |
+| CU8 | Gestión de Equipaje |
 
 ### CU1 — Seguridad y Autenticación
 - Inicio de sesión con email y contraseña (bcrypt)
@@ -251,6 +289,28 @@ src/
 
 ---
 
+## Arquitectura por capas
+
+```
+Página / Componente React
+         │
+         ▼
+   Server Action          ← validación de entrada, 'use server'
+         │
+         ▼
+   Service / Fachada      ← lógica de negocio, orquestación
+         │
+         ▼
+   Repository             ← acceso a datos vía Prisma
+         │
+         ▼
+       MySQL
+```
+
+Los modelos de dominio (`src/models/`) son clases TypeScript puras que encapsulan atributos y comportamientos. Los repositorios son los únicos que acceden a Prisma. Los servicios coordinan modelos y repositorios sin depender de la capa de UI.
+
+---
+
 ## Scripts disponibles
 
 ```bash
@@ -273,28 +333,6 @@ npm run test:e2e           # Playwright headless
 npm run test:e2e:ui        # Playwright con interfaz gráfica
 npm run test:e2e:headed    # Playwright con navegador visible
 ```
-
----
-
-## Arquitectura por capas
-
-```
-Página / Componente React
-         │
-         ▼
-   Server Action          ← validación de entrada, 'use server'
-         │
-         ▼
-   Service / Fachada      ← lógica de negocio, orquestación
-         │
-         ▼
-   Repository             ← acceso a datos vía Prisma
-         │
-         ▼
-       MySQL
-```
-
-Los modelos de dominio (`src/models/`) son clases TypeScript puras que encapsulan atributos y comportamientos. Los repositorios son los únicos que acceden a Prisma. Los servicios coordinan modelos y repositorios sin depender de la capa de UI.
 
 ---
 

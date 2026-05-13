@@ -3,7 +3,7 @@ import { EstadoHorario, FrecuenciaHorario } from '@prisma/client'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { SearchBar } from './SearchBar'
-import { cancelarHorario } from './actions'
+import { CancelarHorarioButton } from './_components/CancelarHorarioButton'
 
 const PAGE_SIZE = 10
 
@@ -171,15 +171,7 @@ export default async function HorariosPage({ searchParams }: PageProps) {
                                                 <span className="material-symbols-outlined">visibility</span>
                                             </Link>
                                             {activo && (
-                                                <form action={cancelarHorario.bind(null, h.horarioID)}>
-                                                    <button
-                                                        type="submit"
-                                                        title="Cancelar horario"
-                                                        className="text-secondary hover:text-error transition-colors p-1"
-                                                    >
-                                                        <span className="material-symbols-outlined">cancel</span>
-                                                    </button>
-                                                </form>
+                                                <CancelarHorarioButton horarioID={h.horarioID} variant="icon" />
                                             )}
                                         </div>
                                     </td>

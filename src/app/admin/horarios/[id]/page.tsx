@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { EstadoHorario, FrecuenciaHorario, VigenciaHorario } from '@prisma/client'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { cancelarHorario } from '../actions'
+import { CancelarHorarioButton } from '../_components/CancelarHorarioButton'
 
 const FRECUENCIA_LABEL: Record<FrecuenciaHorario, string> = {
     UNICO: 'Único', DIARIO: 'Diario', SEMANAL: 'Semanal',
@@ -60,15 +60,7 @@ export default async function HorarioDetallePage({ params }: PageProps) {
                             {horario.estado}
                         </span>
                         {activo && (
-                            <form action={cancelarHorario.bind(null, horario.horarioID)}>
-                                <button
-                                    type="submit"
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-error border border-error/30 hover:bg-error-container transition-colors text-sm font-semibold"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">cancel</span>
-                                    Cancelar horario
-                                </button>
-                            </form>
+                            <CancelarHorarioButton horarioID={horario.horarioID} />
                         )}
                     </div>
                 </div>

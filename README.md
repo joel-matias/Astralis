@@ -3,7 +3,7 @@
 **Universidad Tecnológica de la Mixteca**  
 Materia: Desarrollo de Software Orientado a Objetos  
 Semestre: 602-A | Profesor: IC. Carlos Alberto Martínez Sandoval  
-Equipo 5: Emmanuel Cruz Victoriano, Samantha Betanzo Bolaños, Giovanni López Hernández, Joel Geovanny Matias Santiago
+Equipo 5:Aline Briseida Pérez Bautista, Emmanuel Cruz Victoriano, Samantha Betanzo Bolaños, Giovanni López Hernández, Joel Geovanny Matias Santiago
 
 ---
 

@@ -62,20 +62,22 @@ export default async function AndenesPage({ searchParams }: PageProps) {
                         mostrando anden {from} al {to} de {total} andenes
                     </p>
                 </div>
-                <Link
-                    href="/admin/andenes/asignar"
-                    className="bg-linear-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95 w-fit"
-                >
-                    
-                    Asignar Anden
-                </Link>
-                <Link
-                    href="/admin/andenes/nueva"
-                    className="bg-linear-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95 w-fit"
-                >
-                    <span className="material-symbols-outlined">add_circle</span>
-                    Nuevo Anden
-                </Link>
+                <div className="flex gap-3">
+                    <Link
+                        href="/admin/andenes/asignar"
+                        className="bg-secondary text-on-secondary px-5 py-3 rounded-xl font-semibold flex items-center gap-2 shadow hover:opacity-90 transition-all active:scale-95"
+                    >
+                        <span className="material-symbols-outlined">garage</span>
+                        Asignar andén
+                    </Link>
+                    <Link
+                        href="/admin/andenes/nueva"
+                        className="bg-linear-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95"
+                    >
+                        <span className="material-symbols-outlined">add_circle</span>
+                        Nuevo andén
+                    </Link>
+                </div>
             </header>
 
             {/* SearchBar */}

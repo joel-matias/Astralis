@@ -2,7 +2,7 @@
 
 **Universidad Tecnológica de la Mixteca**  
 Materia: Desarrollo Web 2  
-Semestre: 602-A | Profesor: M.T.C.A. Moisés Emmanuel Ramírez Guzmán
+Semestre: 602-A | Profesor: M.T.C.A. Moisés Emmanuel Ramírez Guzmán  
 Integrantes: Aline Briseida Pérez Bautista, Emmanuel Cruz Victoriano, Samantha Betanzo Bolaños, Giovanni López Hernández, Joel Geovanny Matias Santiago
 
 ---

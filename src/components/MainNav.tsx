@@ -12,20 +12,16 @@ const LINKS_POR_ROL: Record<string, { href: string; label: string }[]> = {
         { href: '/pos', label: 'Taquilla' },
     ],
     GERENTE: [
-        { href: '/operaciones/dashboard', label: 'Dashboard' },
+        { href: '/admin/rutas', label: 'Rutas' },
         { href: '/admin/horarios', label: 'Programación' },
+        { href: '/admin/flota', label: 'Flota' },
+        { href: '/admin/conductores', label: 'Conductores' },
     ],
     VENDEDOR_TAQUILLA: [
         { href: '/pos', label: 'Taquilla' },
     ],
     SUPERVISOR_ANDENES: [
-        { href: '/andenes', label: 'Andenes' },
-    ],
-    ENCARGADO_EQUIPAJE: [
-        { href: '/equipaje', label: 'Equipaje' },
-    ],
-    DESPACHADOR_UNIDADES: [
-        { href: '/admin/conductores', label: 'Conductores' },
+        { href: '/admin/andenes', label: 'Andenes' },
     ],
 }
 

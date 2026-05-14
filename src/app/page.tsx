@@ -4,11 +4,9 @@ import { auth } from '@/auth'
 function rutaSegunRol(role: string | undefined): string {
     switch (role) {
         case 'ADMIN': return '/admin/dashboard'
-        case 'GERENTE': return '/operaciones/dashboard'
+        case 'GERENTE': return '/admin/rutas'
         case 'VENDEDOR_TAQUILLA': return '/pos'
-        case 'SUPERVISOR_ANDENES': return '/andenes'
-        case 'ENCARGADO_EQUIPAJE': return '/equipaje'
-        case 'DESPACHADOR_UNIDADES': return '/admin/conductores'
+        case 'SUPERVISOR_ANDENES': return '/admin/andenes'
         default: return '/login'
     }
 }

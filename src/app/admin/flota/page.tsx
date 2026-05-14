@@ -33,16 +33,16 @@ export default async function FlotaPage({ searchParams }: PageProps) {
         tipo: tipo !== 'all' ? tipo as TipoServicio : undefined,
     }
 
-    const [autobuses, conteos] = await Promise.all([
-        repo.findAll(filtros),
+    const skip = (currentPage - 1) * PAGE_SIZE
+    const [autobuses, total, conteos] = await Promise.all([
+        repo.findAll(filtros, { skip, take: PAGE_SIZE }),
+        repo.count(filtros),
         repo.contarPorEstado(),
     ])
 
-    const total = autobuses.length
-    const paginados = autobuses.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
     const totalPages = Math.ceil(total / PAGE_SIZE)
-    const from = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-    const to = Math.min(currentPage * PAGE_SIZE, total)
+    const from = total === 0 ? 0 : skip + 1
+    const to = Math.min(skip + PAGE_SIZE, total)
 
     const totalPorEstado = Object.fromEntries(conteos.map(c => [c.estadoOperativo, c._count.autobusID]))
 
@@ -108,7 +108,7 @@ export default async function FlotaPage({ searchParams }: PageProps) {
                         </tr>
                     </thead>
                     <tbody>
-                        {paginados.length === 0 && (
+                        {autobuses.length === 0 && (
                             <tr>
                                 <td colSpan={8} className="px-6 py-20 text-center text-secondary">
                                     <span className="material-symbols-outlined text-5xl block mb-2 text-outline">directions_bus</span>
@@ -116,7 +116,7 @@ export default async function FlotaPage({ searchParams }: PageProps) {
                                 </td>
                             </tr>
                         )}
-                        {paginados.map((bus, i) => {
+                        {autobuses.map((bus, i) => {
                             const badge = ESTADO_BADGE[bus.estadoOperativo]
                             const activo = bus.estadoOperativo === EstadoAutobus.DISPONIBLE || bus.estadoOperativo === EstadoAutobus.ASIGNADO
                             return (

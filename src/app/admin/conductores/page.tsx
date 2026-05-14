@@ -20,19 +20,20 @@ export default async function ConductoresPage({ searchParams }: PageProps) {
     const PAGE_SIZE = 10
 
     const repo = new RepoCond()
-    const [conductores, conteos] = await Promise.all([
-        repo.findAll({
-            q: q || undefined,
-            estado: estado !== 'all' ? estado as EstadoConductor : undefined,
-        }),
+    const filtros = {
+        q: q || undefined,
+        estado: estado !== 'all' ? estado as EstadoConductor : undefined,
+    }
+    const skip = (currentPage - 1) * PAGE_SIZE
+    const [conductores, total, conteos] = await Promise.all([
+        repo.findAll(filtros, { skip, take: PAGE_SIZE }),
+        repo.count(filtros),
         repo.contarPorEstado(),
     ])
 
-    const total = conductores.length
-    const paginados = conductores.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
     const totalPages = Math.ceil(total / PAGE_SIZE)
-    const from = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-    const to = Math.min(currentPage * PAGE_SIZE, total)
+    const from = total === 0 ? 0 : skip + 1
+    const to = Math.min(skip + PAGE_SIZE, total)
 
     const totalPorEstado = Object.fromEntries(conteos.map(c => [c.estado, c._count.conductorID]))
 
@@ -98,7 +99,7 @@ export default async function ConductoresPage({ searchParams }: PageProps) {
                         </tr>
                     </thead>
                     <tbody>
-                        {paginados.length === 0 && (
+                        {conductores.length === 0 && (
                             <tr>
                                 <td colSpan={6} className="px-6 py-20 text-center text-secondary">
                                     <span className="material-symbols-outlined text-5xl block mb-2 text-outline">person_search</span>
@@ -106,7 +107,7 @@ export default async function ConductoresPage({ searchParams }: PageProps) {
                                 </td>
                             </tr>
                         )}
-                        {paginados.map((c, i) => {
+                        {conductores.map((c, i) => {
                             const badge = ESTADO_BADGE[c.estado]
                             const licenciaVigente = new Date(c.vigenciaLicencia) > new Date()
                             return (

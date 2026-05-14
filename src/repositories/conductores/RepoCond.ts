@@ -4,21 +4,29 @@ import { EstadoConductor } from '@prisma/client'
 
 export class RepoCond {
 
-    // D3 BaseDatos: obtenerConductoresRegistrados(): List
-    async findAll(filtros?: { q?: string; estado?: EstadoConductor }) {
+    private buildWhere(filtros?: { q?: string; estado?: EstadoConductor }) {
+        return {
+            ...(filtros?.estado ? { estado: filtros.estado } : {}),
+            ...(filtros?.q ? {
+                OR: [
+                    { nombreCompleto: { contains: filtros.q } },
+                    { curp: { contains: filtros.q } },
+                    { numeroLicencia: { contains: filtros.q } },
+                ],
+            } : {}),
+        }
+    }
+
+    async findAll(filtros?: { q?: string; estado?: EstadoConductor }, pagina?: { skip: number; take: number }) {
         return prisma.conductor.findMany({
-            where: {
-                ...(filtros?.estado ? { estado: filtros.estado } : {}),
-                ...(filtros?.q ? {
-                    OR: [
-                        { nombreCompleto: { contains: filtros.q } },
-                        { curp: { contains: filtros.q } },
-                        { numeroLicencia: { contains: filtros.q } },
-                    ],
-                } : {}),
-            },
+            where: this.buildWhere(filtros),
             orderBy: { nombreCompleto: 'asc' },
+            ...(pagina ?? {}),
         })
+    }
+
+    async count(filtros?: { q?: string; estado?: EstadoConductor }) {
+        return prisma.conductor.count({ where: this.buildWhere(filtros) })
     }
 
     // D3 BaseDatos: obtenerConductoresDisponibles(fecha: Date): List

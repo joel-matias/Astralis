@@ -2,23 +2,19 @@ import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 
 const RUTAS_PROTEGIDAS: Record<string, string[]> = {
-    // D9: PermisoMiddleware — rutas de gestión accesibles por Admin y Gerente de Operaciones
-    '/admin/horarios':     ['ADMIN', 'GERENTE'],
-    '/admin/rutas':        ['ADMIN', 'GERENTE'],
-    '/admin/flota':        ['ADMIN', 'GERENTE'],
-    '/admin/conductores':  ['ADMIN', 'GERENTE', 'DESPACHADOR_UNIDADES'],
-    '/admin':              ['ADMIN'],
-    '/pos':         ['ADMIN', 'VENDEDOR_TAQUILLA'],
-    '/andenes':     ['ADMIN', 'SUPERVISOR_ANDENES'],
-    '/equipaje':    ['ADMIN', 'ENCARGADO_EQUIPAJE'],
+    '/admin/horarios':   ['ADMIN', 'GERENTE'],
+    '/admin/rutas':      ['ADMIN', 'GERENTE'],
+    '/admin/flota':      ['ADMIN', 'GERENTE'],
+    '/admin/conductores':['ADMIN', 'GERENTE'],
+    '/admin/andenes':    ['ADMIN', 'SUPERVISOR_ANDENES'],
+    '/admin':            ['ADMIN'],
+    '/pos':              ['ADMIN', 'VENDEDOR_TAQUILLA'],
 }
 
 export const proxy = auth((req) => {
     const { nextUrl } = req
     const pathname = nextUrl.pathname
     const isLoggedIn = !!req.auth
-    console.log('PROXY:', pathname, 'isLoggedIn:', isLoggedIn)
-
     if (pathname.startsWith('/login')) {
         if (isLoggedIn) {
             return NextResponse.redirect(new URL('/', nextUrl.origin))

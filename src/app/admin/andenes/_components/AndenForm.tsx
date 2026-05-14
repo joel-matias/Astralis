@@ -141,7 +141,7 @@ export function AndenForm({ modo, action, defaultValues = {} }: Props) {
                 <div className="flex gap-4">
                     <button
                         type="button"
-                        onClick={() => router.push('/admin/rutas')}
+                        onClick={() => router.back()}
                         className="px-8 py-3 rounded-xl border border-outline-variant font-bold text-secondary hover:bg-surface-container-low transition-all"
                     >
                         Cancelar 
